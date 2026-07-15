@@ -31,7 +31,7 @@ spring:
     openai:
       api-key: ${AI_GATEWAY_API_KEY}
       chat:
-        base-url: ${LLM_BASE_URL}
+        base-url: ${AI_GATEWAY_BASE_URL}
         model: ${LLM_MODEL}
         store: false
 
@@ -71,8 +71,8 @@ hmpps:
   #queueName: ${HMPPS_SQS_QUEUES_DOMAINEVENTSQUEUE_QUEUE_NAME}
   #dlqName: ${HMPPS_SQS_QUEUES_DOMAINEVENTSQUEUE_DLQ_NAME}
   ai-gateway:
-    api-key: ${GATEWAY_API_KEY}
-    base-url: ${LITE_LLM_BASE_URL}
+    api-key: ${AI_GATEWAY_API_KEY}
+    base-url: ${AI_GATEWAY_BASE_URL}
   #GATEWAY_API_KEY: ${GATEWAY_API_KEY}
   auth:
     base-url: https://sign-in-dev.hmpps.service.justice.gov.uk/auth

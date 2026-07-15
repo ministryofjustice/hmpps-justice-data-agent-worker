@@ -19,8 +19,8 @@ spring:
     openai:
       api-key: random_key
       chat:
-        base-url: https://llm-gateway.development.data-platform.service.justice.gov.uk
-        model: bedrock-claude-sonnet-4-5
+        base-url: https://random/ai.com
+        model: test-model
         store: false
 
 hmpps:
