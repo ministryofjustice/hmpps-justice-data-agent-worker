@@ -8,8 +8,27 @@ management.endpoint:
 hmpps-auth:
   url: "http://localhost:8090/auth"
 
+
 springdoc:
   api-docs:
     enabled: true
   swagger-ui:
     enabled: true
+spring:
+  ai:
+    openai:
+      api-key: random_key
+      chat:
+        base-url: https://llm-gateway.development.data-platform.service.justice.gov.uk
+        model: bedrock-claude-sonnet-4-5
+        store: false
+
+hmpps:
+  #sqs:
+  #queues:
+  #domaineventsqueue:
+  #queueName: ${HMPPS_SQS_QUEUES_DOMAINEVENTSQUEUE_QUEUE_NAME}
+  #dlqName: ${HMPPS_SQS_QUEUES_DOMAINEVENTSQUEUE_DLQ_NAME}
+  ai-gateway:
+    api-key: randomValue
+    base-url: https://random/ai.com
