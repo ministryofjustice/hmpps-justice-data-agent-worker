@@ -30,7 +30,9 @@ class LiteLlmWebClientTest : IntegrationTestBase() {
         model = "Random-test-model",
         listOf<Message>(Message("user", "Where is capital of france?")),
       ),
-    )
-    Assertions.assertNotNull(response)
+    ) as Map<String, Any>
+    Assertions.assertTrue { response.containsKey("id") }
+    Assertions.assertTrue { response.containsKey("model") }
+    Assertions.assertTrue { response.containsKey("choices") }
   }
 }
