@@ -14,7 +14,9 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.ValidationE
 @EnableAutoConfiguration
 @ExtendWith(SpringExtension::class)
 @ActiveProfiles("test")
-class JsonSchemaValidatorTest(@Autowired private val validator: JsonSchemaValidator) {
+class JsonSchemaValidatorTest {
+
+  @Autowired private lateinit var validator: JsonSchemaValidator
 
   @Test
   fun `validate json value with json schema and no exception thrown`() {

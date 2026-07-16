@@ -17,10 +17,10 @@ springdoc:
 spring:
   ai:
     openai:
-      api-key: random_key
+      api-key: randomValue
       chat:
-        base-url: https://random/ai.com
-        model: test-model
+        base-url: http://localhost:8091
+        model: test-model-x
         store: false
 
 hmpps:
@@ -31,4 +31,4 @@ hmpps:
   #dlqName: ${HMPPS_SQS_QUEUES_DOMAINEVENTSQUEUE_DLQ_NAME}
   ai-gateway:
     api-key: randomValue
-    base-url: https://random/ai.com
+    base-url: http://localhost:8091
