@@ -8,8 +8,27 @@ management.endpoint:
 hmpps-auth:
   url: "http://localhost:8090/auth"
 
+
 springdoc:
   api-docs:
     enabled: true
   swagger-ui:
     enabled: true
+spring:
+  ai:
+    openai:
+      api-key: randomValue
+      chat:
+        base-url: http://localhost:8091
+        model: test-model-x
+        store: false
+
+hmpps:
+  #sqs:
+  #queues:
+  #domaineventsqueue:
+  #queueName: ${HMPPS_SQS_QUEUES_DOMAINEVENTSQUEUE_QUEUE_NAME}
+  #dlqName: ${HMPPS_SQS_QUEUES_DOMAINEVENTSQUEUE_DLQ_NAME}
+  ai-gateway:
+    api-key: randomValue
+    base-url: http://localhost:8091
