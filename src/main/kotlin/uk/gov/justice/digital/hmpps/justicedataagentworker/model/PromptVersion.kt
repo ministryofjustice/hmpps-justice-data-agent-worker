@@ -11,18 +11,18 @@ import java.util.UUID
 
 @Entity
 data class PromptVersion(
-    @Id
+  @Id
   val id: UUID,
-    val version: Int,
-    @ManyToOne(fetch = FetchType.EAGER)
+  val version: Int,
+  @ManyToOne(fetch = FetchType.EAGER)
   val prompt: Prompt,
-    val promptTemplate: String,
-    @JdbcTypeCode(SqlTypes.JSON)
+  val promptTemplate: String,
+  @JdbcTypeCode(SqlTypes.JSON)
   val requestContract: Any,
-    @JdbcTypeCode(SqlTypes.JSON)
+  @JdbcTypeCode(SqlTypes.JSON)
   val responseContract: Any,
-    val createdBy: UUID,
-    val createdDate: LocalDateTime,
+  val createdBy: UUID,
+  val createdDate: LocalDateTime,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

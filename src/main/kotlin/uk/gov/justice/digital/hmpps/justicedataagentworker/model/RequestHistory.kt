@@ -10,18 +10,18 @@ import java.util.UUID
 
 @Entity
 data class RequestHistory(
-    @Id
+  @Id
   val id: UUID,
-    val synchronousRequest: Boolean,
-    val correlationId: UUID,
-    val promptVersionId: UUID,
-    val queuedAt: LocalDateTime? = null,
-    val receivedAt: LocalDateTime? = null,
-    val completedAt: LocalDateTime? = null,
-    @Enumerated(EnumType.STRING)
+  val synchronousRequest: Boolean,
+  val correlationId: UUID,
+  val promptVersionId: UUID,
+  val queuedAt: LocalDateTime? = null,
+  val receivedAt: LocalDateTime? = null,
+  val completedAt: LocalDateTime? = null,
+  @Enumerated(EnumType.STRING)
   val status: Status,
-    val error: String? = null,
-    val errorAt: LocalDateTime? = null,
+  val error: String? = null,
+  val errorAt: LocalDateTime? = null,
 ) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true

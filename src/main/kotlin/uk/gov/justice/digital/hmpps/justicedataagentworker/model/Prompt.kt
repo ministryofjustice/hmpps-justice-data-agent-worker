@@ -11,16 +11,16 @@ import java.util.UUID
 
 @Entity
 data class Prompt(
-    @Id
+  @Id
   val id: UUID,
-    val promptKey: String,
-    @OneToMany(mappedBy = "prompt", cascade = [CascadeType.ALL], fetch = FetchType.EAGER)
+  val promptKey: String,
+  @OneToMany(mappedBy = "prompt", cascade = [CascadeType.ALL], fetch = FetchType.EAGER)
   val promptVersions: MutableSet<PromptVersion>,
-    val description: String,
-    val isDeleted: Boolean,
-    val createdBy: UUID,
-    val createdDate: LocalDateTime,
-  ) {
+  val description: String,
+  val isDeleted: Boolean,
+  val createdBy: UUID,
+  val createdDate: LocalDateTime,
+) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false

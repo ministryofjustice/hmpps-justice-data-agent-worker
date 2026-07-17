@@ -9,7 +9,7 @@ class InfoTest(
   @Autowired private val buildProperties: BuildProperties,
 ) : IntegrationTestBase() {
   @Test
-  fun `Info page is accessible`() {
+  fun `info page is accessible`() {
     webTestClient.get()
       .uri("/info")
       .exchange()
@@ -20,7 +20,7 @@ class InfoTest(
   }
 
   @Test
-  fun `Info page reports version`() {
+  fun `info page reports version`() {
     webTestClient.get().uri("/info")
       .exchange()
       .expectStatus().isOk

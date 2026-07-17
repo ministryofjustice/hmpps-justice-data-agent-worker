@@ -1,4 +1,4 @@
-package uk.gov.justice.digital.hmpps.justicedataagentworker.repository.model
+package uk.gov.justice.digital.hmpps.justicedataagentworker.repository
 
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
