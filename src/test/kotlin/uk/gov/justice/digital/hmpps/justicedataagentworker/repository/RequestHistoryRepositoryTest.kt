@@ -58,12 +58,25 @@ class RequestHistoryRepositoryTest {
   fun `save history request`() {
     val entity = requestHistoryRepository.save(history)
     Assertions.assertNotNull(entity)
-    assertEquals(history.id, entity.id)
+    assertEquals(history, entity)
   }
 
   @Test
   fun `get request by id`() {
     val entity = requestHistoryRepository.findById(history.id).get()
-    assertEquals(history.id, entity.id)
+    assertEquals(history, entity)
+  }
+
+  private fun assertRequestHistory(expected: RequestHistory, actual: RequestHistory) {
+    assertEquals(expected.id, actual.id)
+    assertEquals(expected.correlationId, actual.correlationId)
+    assertEquals(expected.synchronousRequest, actual.synchronousRequest)
+    assertEquals(expected.status, actual.status)
+    assertEquals(expected.completedAt, actual.completedAt)
+    assertEquals(expected.promptVersionId, actual.promptVersionId)
+    assertEquals(expected.error, actual.error)
+    assertEquals(expected.errorAt, actual.errorAt)
+    assertEquals(expected.queuedAt, actual.queuedAt)
+    assertEquals(expected.receivedAt, actual.receivedAt)
   }
 }

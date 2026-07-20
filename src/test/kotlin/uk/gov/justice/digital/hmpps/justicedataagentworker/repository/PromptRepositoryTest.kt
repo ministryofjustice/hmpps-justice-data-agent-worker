@@ -55,22 +55,32 @@ class PromptRepositoryTest {
     assertEquals(0, entity.promptVersions.size)
     val promptVersion = DataGenerator.buildPromptVersion(prompt, jsonRequestSchema, jsonResponseSchema)
     entity.promptVersions.add(promptVersion)
+    prompt.promptVersions.add(promptVersion)
     val updatedEntity = promptRepository.saveAndFlush(entity)
-    assertEquals(1, updatedEntity.promptVersions.size)
     assertEquals(promptVersion.id, updatedEntity.promptVersions.first().id)
+    assertPrompt(prompt, updatedEntity)
     prompt = promptRepository.findById(entity.id).get()
-    assertEquals(entity.id, prompt.id)
+    assertPrompt(prompt, entity)
   }
 
   fun `update prompt`() {
     prompt.promptVersions.add(promptVersion)
     val entity = promptRepository.save(prompt)
-    assertEquals(1, entity.promptVersions.size)
     assertEquals(promptVersion.id, entity.promptVersions.first().id)
+    assertPrompt(prompt, entity)
   }
 
   fun `get prompt by id`() {
     val entity = promptRepository.findById(prompt.id).get()
     assertEquals(prompt.id, entity.id)
+    assertPrompt(prompt, entity)
+  }
+
+  private fun assertPrompt(expected: Prompt, actual: Prompt) {
+    assertEquals(expected.id, actual.id)
+    assertEquals(expected.promptKey, actual.promptKey)
+    assertEquals(expected.description, actual.description)
+    assertEquals(expected.createdBy, actual.createdBy)
+    assertEquals(expected.createdDate, actual.createdDate)
   }
 }

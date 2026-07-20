@@ -5,16 +5,15 @@ import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.OneToMany
-import uk.gov.justice.digital.hmpps.justicedataagentworker.model.PromptVersion
 import java.time.LocalDateTime
-import java.util.UUID
+import java.util.*
 
 @Entity
 data class Prompt(
   @Id
   val id: UUID,
   val promptKey: String,
-  @OneToMany(mappedBy = "prompt", cascade = [CascadeType.ALL], fetch = FetchType.EAGER)
+  @OneToMany(mappedBy = "prompt", cascade = [CascadeType.ALL], fetch = FetchType.LAZY)
   val promptVersions: MutableSet<PromptVersion>,
   val description: String,
   val isDeleted: Boolean,

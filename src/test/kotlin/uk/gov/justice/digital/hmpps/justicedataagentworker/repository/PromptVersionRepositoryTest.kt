@@ -41,6 +41,7 @@ class PromptVersionRepositoryTest {
     prompt = DataGenerator.buildPrompt(mutableSetOf())
     promptRepository.save(prompt)
     promptVersion = DataGenerator.buildPromptVersion(prompt, jsonRequestSchema, jsonResponseSchema)
+    promptVersionRepository.save(promptVersion)
   }
 
   @AfterAll
@@ -49,18 +50,30 @@ class PromptVersionRepositoryTest {
   }
 
   @Test
-  fun `create prompt_version`() {
+  fun `create prompt version`() {
+    val promptVersion = promptVersionRepository.save(promptVersion)
     val entity = promptVersionRepository.save(promptVersion)
     assertNotNull(entity)
-    assertEquals(promptVersion.id, entity.id)
-    assertEquals(prompt.id, entity.prompt.id)
+    assertPromptVersion(promptVersion, entity)
   }
 
   @Test
-  fun `get  prompt_version by id`() {
+  fun `get  prompt version by id`() {
     val entity = promptVersionRepository.findById(promptVersion.id).get()
     assertNotNull(entity)
     assertEquals(promptVersion.id, entity.id)
     assertEquals(prompt.id, entity.prompt.id)
+    assertPromptVersion(promptVersion, entity)
+  }
+
+  private fun assertPromptVersion(expected: PromptVersion, actual: PromptVersion) {
+    assertEquals(expected.id, actual.id)
+    assertEquals(expected.promptTemplate, actual.promptTemplate)
+    assertEquals(expected.prompt, actual.prompt)
+    assertEquals(expected.version, actual.version)
+    assertEquals(expected.requestContract, actual.requestContract)
+    assertEquals(expected.responseContract, actual.responseContract)
+    assertEquals(expected.createdBy, actual.createdBy)
+    assertEquals(expected.createdDate, actual.createdDate)
   }
 }
