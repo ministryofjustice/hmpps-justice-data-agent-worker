@@ -69,6 +69,7 @@ class PromptVersionRepositoryTest {
     assertEquals(expected.id, actual.id)
     assertEquals(expected.promptTemplate, actual.promptTemplate)
     assertEquals(expected.prompt, actual.prompt)
+    assertEquals(expected.llmModel, actual.llmModel)
     assertEquals(expected.version, actual.version)
     assertEquals(expected.requestContract, actual.requestContract)
     assertEquals(expected.responseContract, actual.responseContract)

@@ -104,6 +104,7 @@ class DataGenerator {
       Generators.timeBasedEpochGenerator().generate(),
       1,
       prompt,
+      "Test-Model-x1",
       "Inline instruction  FOR LLM",
       false,
       responseJsonSchema,

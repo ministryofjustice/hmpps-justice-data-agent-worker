@@ -2,8 +2,8 @@ CREATE TABLE if not exists request_history
 (
     id                  UUID NOT NULL,
     synchronous_request BOOLEAN NOT NULL,
-    correlation_id      UUID NOT NULL ,
-    prompt_version_id   UUID NOT NULL ,
+    correlation_id      UUID NOT NULL,
+    prompt_version_id   UUID NOT NULL,
     queued_at           TIMESTAMP,
     received_at         TIMESTAMP,
     completed_at        TIMESTAMP,

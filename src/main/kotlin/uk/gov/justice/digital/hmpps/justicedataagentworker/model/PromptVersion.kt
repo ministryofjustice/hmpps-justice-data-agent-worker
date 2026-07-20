@@ -16,6 +16,7 @@ data class PromptVersion(
   val version: Int,
   @ManyToOne(fetch = FetchType.EAGER)
   val prompt: Prompt,
+  val llmModel: String,
   val promptTemplate: String,
   @JdbcTypeCode(SqlTypes.JSON)
   val requestContract: Any,
