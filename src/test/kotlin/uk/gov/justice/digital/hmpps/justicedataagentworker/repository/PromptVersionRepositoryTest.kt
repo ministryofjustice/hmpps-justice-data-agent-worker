@@ -51,7 +51,7 @@ class PromptVersionRepositoryTest {
 
   @Test
   fun `create prompt version`() {
-    val promptVersion = promptVersionRepository.save(promptVersion)
+    val promptVersion = DataGenerator.buildPromptVersion(prompt, jsonRequestSchema, jsonResponseSchema)
     val entity = promptVersionRepository.save(promptVersion)
     assertNotNull(entity)
     assertPromptVersion(promptVersion, entity)
@@ -61,8 +61,6 @@ class PromptVersionRepositoryTest {
   fun `get  prompt version by id`() {
     val entity = promptVersionRepository.findById(promptVersion.id).get()
     assertNotNull(entity)
-    assertEquals(promptVersion.id, entity.id)
-    assertEquals(prompt.id, entity.prompt.id)
     assertPromptVersion(promptVersion, entity)
   }
 
