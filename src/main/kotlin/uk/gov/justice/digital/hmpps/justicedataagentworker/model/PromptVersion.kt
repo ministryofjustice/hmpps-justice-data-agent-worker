@@ -20,7 +20,7 @@ data class PromptVersion(
   @JdbcTypeCode(SqlTypes.JSON)
   val requestContract: Any,
   @JdbcTypeCode(SqlTypes.JSON)
-  val responseContract: Any,
+  val responseContract: Any? = null,
   val createdBy: UUID,
   val createdDate: LocalDateTime,
 ) {
