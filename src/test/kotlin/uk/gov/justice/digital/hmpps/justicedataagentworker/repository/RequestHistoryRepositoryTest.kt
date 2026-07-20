@@ -74,7 +74,7 @@ class RequestHistoryRepositoryTest {
     assertEquals(expected.status, actual.status)
     assertEquals(expected.completedAt, actual.completedAt)
     assertEquals(expected.promptVersionId, actual.promptVersionId)
-    assertEquals(expected.error, actual.error)
+    assertEquals(expected.errorMessage, actual.errorMessage)
     assertEquals(expected.errorAt, actual.errorAt)
     assertEquals(expected.queuedAt, actual.queuedAt)
     assertEquals(expected.receivedAt, actual.receivedAt)

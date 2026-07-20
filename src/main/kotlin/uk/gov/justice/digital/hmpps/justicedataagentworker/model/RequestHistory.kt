@@ -4,7 +4,6 @@ import jakarta.persistence.Entity
 import jakarta.persistence.EnumType
 import jakarta.persistence.Enumerated
 import jakarta.persistence.Id
-import uk.gov.justice.digital.hmpps.justicedataagentworker.model.Status
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -20,7 +19,7 @@ data class RequestHistory(
   val completedAt: LocalDateTime? = null,
   @Enumerated(EnumType.STRING)
   val status: Status,
-  val error: String? = null,
+  val errorMessage: String? = null,
   val errorAt: LocalDateTime? = null,
 ) {
   override fun equals(other: Any?): Boolean {

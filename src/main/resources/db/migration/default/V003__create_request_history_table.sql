@@ -18,7 +18,7 @@ CREATE TABLE if not exists request_history
         'FAILED'::character varying,
         'REJECTED'::character varying
     ])::text[])),
-    error               TEXT,
+    error_message                TEXT,
     error_at            TIMESTAMP,
     CONSTRAINT pk_requesthistory PRIMARY KEY (id)
 );
