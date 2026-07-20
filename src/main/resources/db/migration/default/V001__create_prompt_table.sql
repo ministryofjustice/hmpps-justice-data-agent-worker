@@ -5,6 +5,6 @@ CREATE TABLE if not exists prompt
     description  VARCHAR(255),
     is_deleted   BOOLEAN NOT NULL,
     created_by   UUID,
-    created_date TIMESTAMP WITHOUT TIME ZONE,
+    created_date TIMESTAMP,
     CONSTRAINT pk_prompt PRIMARY KEY (id)
 );

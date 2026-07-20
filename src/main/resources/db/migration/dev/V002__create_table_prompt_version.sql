@@ -7,7 +7,7 @@ CREATE TABLE if not exists prompt_version
     request_contract  JSONB,
     response_contract JSONB,
     created_by        UUID,
-    created_date      TIMESTAMP WITHOUT TIME ZONE,
+    created_date      TIMESTAMP,
     CONSTRAINT pk_promptversion PRIMARY KEY (id)
 );
 

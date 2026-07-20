@@ -4,11 +4,11 @@ CREATE TABLE if not exists request_history
     synchronous_request BOOLEAN NOT NULL,
     correlation_id      UUID,
     prompt_version_id   UUID,
-    queued_at           TIMESTAMP WITHOUT TIME ZONE,
-    received_at         TIMESTAMP WITHOUT TIME ZONE,
-    completed_at        TIMESTAMP WITHOUT TIME ZONE,
+    queued_at           TIMESTAMP,
+    received_at         TIMESTAMP,
+    completed_at        TIMESTAMP,
     status              VARCHAR(255),
     error               VARCHAR(255),
-    error_at            TIMESTAMP WITHOUT TIME ZONE,
+    error_at            TIMESTAMP,
     CONSTRAINT pk_requesthistory PRIMARY KEY (id)
 );
