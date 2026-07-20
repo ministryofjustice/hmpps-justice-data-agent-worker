@@ -1,6 +1,7 @@
 plugins {
   id("uk.gov.justice.hmpps.gradle-spring-boot") version "10.5.6"
   kotlin("plugin.spring") version "2.4.0"
+  kotlin("plugin.jpa") version "2.3.20"
 }
 
 extra["springAiVersion"] = "2.0.0"
@@ -10,6 +11,13 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-webflux")
   implementation("org.springframework.boot:spring-boot-starter-webclient")
   implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3")
+  implementation("org.springframework.boot:spring-boot-starter-data-jpa")
+  implementation("com.fasterxml.uuid:java-uuid-generator:5.2.0")
+  implementation("org.flywaydb:flyway-core")
+  implementation("org.springframework.boot:spring-boot-starter-flyway")
+  implementation("org.flywaydb:flyway-database-postgresql")
+  implementation("org.springframework.boot:spring-boot-starter-flyway:4.1.0-RC1")
+  implementation("org.postgresql:postgresql:42.7.9")
   implementation("com.networknt:json-schema-validator:1.4.0")
   implementation("org.springframework.ai:spring-ai-starter-model-anthropic")
   implementation("org.springframework.ai:spring-ai-starter-model-openai")
@@ -17,6 +25,7 @@ dependencies {
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.10.2")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.10.2")
 
+  testImplementation("com.h2database:h2:2.4.240")
   testImplementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter-test:2.5.0")
   testImplementation("org.springframework.boot:spring-boot-starter-webflux-test")
   testImplementation("org.wiremock:wiremock-standalone:3.13.2")
