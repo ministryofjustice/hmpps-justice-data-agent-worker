@@ -47,6 +47,7 @@ class PromptVersionRepositoryTest {
   @AfterAll
   fun tearDown() {
     promptRepository.deleteAll()
+    promptVersionRepository.deleteAll()
   }
 
   @Test
