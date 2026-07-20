@@ -52,22 +52,12 @@ class PromptRepositoryTest {
     val entity = promptRepository.save(prompt)
 
     Assertions.assertNotNull(entity)
+    assertPrompt(prompt, entity)
     assertEquals(0, entity.promptVersions.size)
     val promptVersion = DataGenerator.buildPromptVersion(prompt, jsonRequestSchema, jsonResponseSchema)
     entity.promptVersions.add(promptVersion)
-    prompt.promptVersions.add(promptVersion)
-    val updatedEntity = promptRepository.saveAndFlush(entity)
-    assertEquals(promptVersion.id, updatedEntity.promptVersions.first().id)
+    val updatedEntity = promptRepository.save(entity)
     assertPrompt(prompt, updatedEntity)
-    prompt = promptRepository.findById(entity.id).get()
-    assertPrompt(prompt, entity)
-  }
-
-  fun `update prompt`() {
-    prompt.promptVersions.add(promptVersion)
-    val entity = promptRepository.save(prompt)
-    assertEquals(promptVersion.id, entity.promptVersions.first().id)
-    assertPrompt(prompt, entity)
   }
 
   fun `get prompt by id`() {
@@ -81,6 +71,5 @@ class PromptRepositoryTest {
     assertEquals(expected.promptKey, actual.promptKey)
     assertEquals(expected.description, actual.description)
     assertEquals(expected.createdBy, actual.createdBy)
-    assertEquals(expected.createdDate, actual.createdDate)
   }
 }

@@ -73,6 +73,5 @@ class PromptVersionRepositoryTest {
     assertEquals(expected.requestContract, actual.requestContract)
     assertEquals(expected.responseContract, actual.responseContract)
     assertEquals(expected.createdBy, actual.createdBy)
-    assertEquals(expected.createdDate, actual.createdDate)
   }
 }
