@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.model
 
 import jakarta.persistence.CascadeType
+import jakarta.persistence.Column
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.Id
@@ -12,6 +13,7 @@ import java.util.*
 data class Prompt(
   @Id
   val id: UUID,
+  @Column(unique = true)
   val promptKey: String,
   @OneToMany(mappedBy = "prompt", cascade = [CascadeType.ALL], fetch = FetchType.LAZY)
   val promptVersions: MutableSet<PromptVersion>,

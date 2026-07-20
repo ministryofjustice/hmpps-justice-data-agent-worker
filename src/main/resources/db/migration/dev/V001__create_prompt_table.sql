@@ -8,3 +8,6 @@ CREATE TABLE if not exists prompt
     created_date TIMESTAMP,
     CONSTRAINT pk_prompt PRIMARY KEY (id)
 );
+
+ALTER TABLE prompt
+    ADD CONSTRAINT uc_prompt_promptkey UNIQUE (prompt_key);
