@@ -36,8 +36,17 @@ generic-service:
   #     [name of environment variable as seen by app]: [key of kubernetes secret to load]
 
   namespace_secrets:
+    hmpps-justice-data-agent-worker:
+      AI_GATEWAY_API_KEY: "AI_GATEWAY_API_KEY"
+      AI_GATEWAY_BASE_URL: "AI_GATEWAY_BASE_URL"
+      LLM_MODEL: "LLM_MODEL"
     hmpps-justice-data-agent-worker-application-insights:
       APPLICATIONINSIGHTS_CONNECTION_STRING: "APPLICATIONINSIGHTS_CONNECTION_STRING"
+    rds-postgresql-instance-output:
+      DB_NAME: "database_name"
+      DB_USERNAME: "database_username"
+      DB_PASSWORD: "database_password"
+      DB_ENDPOINT: "rds_instance_endpoint"
 
   allowlist:
     groups:
