@@ -24,7 +24,7 @@ import java.util.UUID
 }
  */
 data class JdaRequest(
-  val requestId: UUID,
+  // val requestId: UUID,
   val correlationId: UUID,
   val prompt: Prompt,
   val requestData: Any,
@@ -33,7 +33,7 @@ data class JdaRequest(
 data class Prompt(
   val key: String,
   val version: Int,
-  val metaData: MetaData,
+  // val metaData: MetaData,
 )
 
 data class MetaData(

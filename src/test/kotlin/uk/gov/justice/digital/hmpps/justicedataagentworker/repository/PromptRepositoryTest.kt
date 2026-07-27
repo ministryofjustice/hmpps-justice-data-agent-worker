@@ -49,9 +49,7 @@ class PromptRepositoryTest : IntegrationTestBase() {
 
       Assertions.assertNotNull(entity)
       assertPrompt(prompt, entity)
-      // assertEquals(0, entity.promptVersions.size)
-      val promptVersion = DataGenerator.buildPromptVersion(prompt.id!!, jsonRequestSchema, jsonResponseSchema)
-      // entity.promptVersions.add(promptVersion)
+      entity.new = false
       val updatedEntity = promptRepository.save(entity)
       assertPrompt(prompt, updatedEntity)
     }

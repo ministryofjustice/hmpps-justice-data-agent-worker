@@ -25,22 +25,16 @@ class PromptVersionServiceImpl(
   companion object {
     private val logger = LoggerFactory.getLogger(this::class.java)
   }
+
   override suspend fun savePromptVersion(promptVersionRequest: PromptVersionRequest): PromptVersionResponse {
-    // find prompt with id exist
-    var prompt: Prompt? = null
-    var promptVersionResponse: PromptVersionResponse? = null
-    promptRepository.findById(promptVersionRequest.promptId)?.let { entity ->
-      prompt = entity
-    }
+    val prompt = promptRepository.findById(promptVersionRequest.promptId)
     if (prompt == null) {
       throw NotFoundException("Prompt with ${promptVersionRequest.promptId} not found")
     }
-
-    val promptVersion = convertPromptVersionRequestToEntity(promptVersionRequest)
-    promptVersionRepository.save(promptVersion)?.let { entity ->
-      promptVersionResponse = convertEntityToPromptVersionResponse(entity)
-    }
-    return promptVersionResponse!!
+    var promptVersion = convertPromptVersionRequestToEntity(promptVersionRequest)
+    logger.info("Saving prompt version for client: ${promptVersion.createdBy}, version ${promptVersion.version}")
+    promptVersion = promptVersionRepository.save(promptVersion)
+    return convertEntityToPromptVersionResponse(promptVersion)
   }
 
   override suspend fun getPromptVersionById(id: UUID): PromptVersionResponse {
@@ -49,19 +43,17 @@ class PromptVersionServiceImpl(
     if (promptVersion == null) {
       throw NotFoundException("Prompt Version with id $id not found")
     }
-    return convertEntityToPromptVersionResponse(promptVersion!!)
+    return convertEntityToPromptVersionResponse(promptVersion)
   }
 
   override suspend fun getPromptVersionByKeyAndVersion(key: String, version: Int): PromptVersionResponse {
-    var prompt: Prompt? = null
-    promptRepository.findPromptByPromptKey(key).let { entity -> prompt = entity }
-
-    var promptVersion: PromptVersion? = null
-    promptVersionRepository.findPromptVersionByPromptIdAndVersion(prompt?.id!!, version).let { entity -> promptVersion = entity }
+    promptRepository.save(buildPrompt(mutableSetOf()))
+    val prompt = promptRepository.findPromptByPromptKey(key)
+    var promptVersion = promptVersionRepository.findPromptVersionByPromptIdAndVersion(prompt?.id!!, version)
     if (promptVersion == null) {
       throw NotFoundException("Prompt Version with id $key and $version not found")
     }
-    return convertEntityToPromptVersionResponse(promptVersion!!)
+    return convertEntityToPromptVersionResponse(promptVersion)
   }
 
   override suspend fun updatePromptVersionById(
@@ -91,15 +83,26 @@ class PromptVersionServiceImpl(
     )
   }
 
-  private fun convertEntityToPromptVersionResponse(promptVersion: PromptVersion): PromptVersionResponse = PromptVersionResponse(
-    promptVersion.id,
-    promptVersion.version,
-    promptVersion.promptId,
-    promptVersion.llmModel,
-    promptVersion.promptTemplate,
-    promptVersion.requestContract.toString(),
-    promptVersion.requestContract.toString(),
-    promptVersion.createdBy,
-    promptVersion.createdDate,
+  private fun convertEntityToPromptVersionResponse(promptVersion: PromptVersion): PromptVersionResponse =
+    PromptVersionResponse(
+      promptVersion.id!!,
+      promptVersion.version,
+      promptVersion.promptId,
+      promptVersion.llmModel,
+      promptVersion.promptTemplate,
+      promptVersion.requestContract.toString(),
+      promptVersion.requestContract.toString(),
+      promptVersion.createdBy,
+      promptVersion.createdDate,
+    )
+
+  fun buildPrompt(promptVersion: MutableSet<PromptVersion>): Prompt = Prompt(
+    Generators.timeBasedEpochGenerator().generate(),
+    UUID.randomUUID().toString(),
+    // promptVersion,
+    "Inline instruction  FOR LLM",
+    false,
+    UUID.randomUUID(),
+    LocalDateTime.now(ZoneOffset.UTC),
   )
 }

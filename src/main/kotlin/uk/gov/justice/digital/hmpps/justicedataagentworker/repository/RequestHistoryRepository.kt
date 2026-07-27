@@ -7,4 +7,6 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.model.RequestHistory
 import java.util.UUID
 
 @Repository
-interface RequestHistoryRepository : CoroutineCrudRepository<RequestHistory, UUID>
+interface RequestHistoryRepository : CoroutineCrudRepository<RequestHistory, UUID> {
+  suspend fun save(requestHistory: RequestHistory): RequestHistory
+}

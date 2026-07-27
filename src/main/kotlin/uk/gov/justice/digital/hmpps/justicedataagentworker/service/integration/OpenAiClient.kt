@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component
 class OpenAiClient(
   private val chatClient: ChatClient,
 ) {
-  fun getOpenAiChatResponse(prompt: Prompt, model: String): Any = chatClient.prompt(prompt)
+  suspend fun getOpenAiChatResponse(prompt: Prompt, model: String): Any = chatClient.prompt(prompt)
     .options(OpenAiChatOptions.builder().model(model).store(false))
     .call()
     .chatClientResponse()

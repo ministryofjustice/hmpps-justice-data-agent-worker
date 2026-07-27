@@ -1,6 +1,12 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.service
 
+import com.fasterxml.uuid.Generators
 import com.openai.models.chat.completions.ChatCompletion
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.client.ChatClientResponse
 import org.springframework.ai.chat.messages.SystemMessage
@@ -10,14 +16,21 @@ import org.springframework.stereotype.Service
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptVersionResponse
+import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.LiteLlmException
+import uk.gov.justice.digital.hmpps.justicedataagentworker.model.RequestHistory
+import uk.gov.justice.digital.hmpps.justicedataagentworker.model.Status
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.integration.LiteLlmService
 import uk.gov.justice.digital.hmpps.justicedataagentworker.validator.JsonSchemaValidator
+import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.util.UUID
 
 @Service
 class JdaWorkerServiceImpl(
   private val jsonSchemaValidator: JsonSchemaValidator,
   private val liteLlmService: LiteLlmService,
   private val promptVersionService: PromptVersionService,
+  private val requestHistoryService: RequestHistoryService
 ) : JdaWorkerService {
 
   companion object {
@@ -32,48 +45,69 @@ class JdaWorkerServiceImpl(
   ): Any {
     var response = liteLlmService.connect(prompt, model, useWebClient)
     response = convertAiResponseToApiResponse(response)
-    /*if (response is ChatCompletion) {
-      val message = response.choices().get(0) as Map<String, Any>
-      val content = message["message"] as Map<String, Any>
-      response = content["content"] as String
-      response = response.replace("```json", "")
-      response = response.replace("```", "")
-      response = response.replace("\n", "")
-    }
-
-    if (response is ChatClientResponse) {
-      response = response.chatResponse!!.result!!.output.text!!
-      response = response.replace("```json", "")
-      response = response.replace("```", "")
-      response = response.replace("\n", "")
-    }*/
     if (!jsonSchema.isNullOrBlank()) {
       logger.info("Validating data with json schema: {}")
       jsonSchemaValidator.validateJson(jsonSchema!!, response as String)
     }
-    return response!!
+    return response
   }
 
   override suspend fun handleSynchronousRequest(jdaRequest: JdaRequest): JdaResponse {
-    var promptVersionResponse: PromptVersionResponse? = null
-    promptVersionService.getPromptVersionByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version)?.let { version ->
-      promptVersionResponse = version
-    }
-    val aiResponse = liteLlmService.connect(
-      convertMessageToPrompt(
-        promptVersionResponse!!.promptTemplate,
-        jdaRequest.requestData as String,
-      ),
-      promptVersionResponse!!.llmModel,
-      false,
-    )
-    val response = convertAiResponseToApiResponse(aiResponse)
-    return JdaResponse(
-      jdaRequest.requestId,
+    var promptVersionResponse = promptVersionService.getPromptVersionByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version)
+    val time = LocalDateTime.now(ZoneOffset.UTC)
+    var requestHistory : RequestHistory? = null
+    var aiResponse: Any? = null
+    requestHistory = RequestHistory(
+      Generators.timeBasedEpochGenerator().generate(),
+      true,
       jdaRequest.correlationId,
-      jdaRequest.prompt,
-      response,
+      promptVersionResponse.id!!,
+      time,
+      time,
+      null,
+      Status.QUEUED,
+      null,
+      null
     )
+    coroutineScope {
+      launch {
+        requestHistoryService.saveRequestHistory(requestHistory)
+      }
+      launch { aiResponse = liteLlmService.connect(
+        convertMessageToPrompt(
+          promptVersionResponse!!.promptTemplate,
+          jdaRequest.requestData as String,
+        ),
+        promptVersionResponse.llmModel,
+        false,
+      ) }
+    }
+    try {
+      val response = convertAiResponseToApiResponse(aiResponse!!)
+      if (promptVersionResponse.responseContract != null) {
+        // jsonSchemaValidator.validateJson(promptVersionResponse.responseContract, promptVersionResponse.responseContract.trimIndent())
+      }
+      // requestHistory = requestHistoryService.getRequestHistoryById(requestHistory.id!!)
+      requestHistory?.new = false
+      requestHistory?.status = Status.SUCCEEDED
+      requestHistory?.completedAt = LocalDateTime.now(ZoneOffset.UTC)
+      requestHistoryService.saveRequestHistory(requestHistory!!)
+      return JdaResponse(
+        UUID.randomUUID(),
+        jdaRequest.correlationId,
+        jdaRequest.prompt,
+        response,
+      )
+    } catch (e: Exception) {
+      logger.error("Error processing connecting to lite llm: {}", e)
+      // requestHistory = requestHistoryService.getRequestHistoryById(requestHistory.id!!)
+      requestHistory?.new = false
+      requestHistory?.status = Status.REJECTED
+      requestHistory?.errorAt = LocalDateTime.now(ZoneOffset.UTC)
+      requestHistory?.errorMessage = e.message
+      requestHistoryService.saveRequestHistory(requestHistory!!)
+      throw LiteLlmException("Exception getting llm response: e")
+    }
   }
 
   override suspend fun handleAsynchronousRequest(jdaRequest: JdaRequest): JdaResponse {
@@ -106,4 +140,5 @@ class JdaWorkerServiceImpl(
     }
     return response
   }
+
 }

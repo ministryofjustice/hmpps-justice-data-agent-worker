@@ -21,23 +21,19 @@ class PromptServiceImpl(private val promptRepository: PromptRepository) : Prompt
 
   override suspend fun savePrompt(promptRequest: PromptRequest): PromptResponse {
     logger.info("saving prompt created by ${promptRequest.createdBy}")
-    convertPromptRequestToEntity(promptRequest)
-    var response: PromptResponse? = null
-    promptRepository.save(convertPromptRequestToEntity(promptRequest))?.let { entity ->
-      response = convertPromptToPromptResponse(entity)
-    }
+    val prompt = convertPromptRequestToEntity(promptRequest)
+    val entity = promptRepository.save(prompt)
     logger.info("returning prompt created by ${promptRequest.createdBy}")
-    return response!!
+    return convertPromptToPromptResponse(entity)
   }
 
   override suspend fun getPromptById(id: UUID): PromptResponse {
-    var prompt: Prompt? = null
-    promptRepository.findById(id)?.let { promptEntity ->
-      prompt = promptEntity
-    }
+    logger.info("Getting prompt by id: $id")
+    val prompt = promptRepository.findById(id)
     if (prompt == null) {
       throw NotFoundException("Prompt with id $id not found")
     }
+    logger.info("returning prompt by id: $id")
     return convertPromptToPromptResponse(prompt)
   }
 

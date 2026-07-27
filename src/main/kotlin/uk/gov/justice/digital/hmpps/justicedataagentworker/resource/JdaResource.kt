@@ -11,6 +11,8 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.Content
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaRequest
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.JdaWorkerService
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.integration.ChatCompletionRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.integration.Message
@@ -19,6 +21,16 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.service.integration.M
 class JdaResource(private val jdaWorkerService: JdaWorkerService) {
 
   // This endpoint is for test purpose only for developer
+
+  @PostMapping("v1/chat/jda/worker", consumes = [APPLICATION_JSON_VALUE], produces = [APPLICATION_JSON_VALUE])
+  suspend fun analyze(
+    @RequestBody jdaRequest: JdaRequest,
+  ): ResponseEntity<JdaResponse> {
+    val jdaResponse = jdaWorkerService.handleSynchronousRequest(jdaRequest)
+    return ResponseEntity.status(HttpStatus.OK).body(jdaResponse)
+  }
+
+
   @PostMapping("v1/chat/completion", consumes = [APPLICATION_JSON_VALUE], produces = [APPLICATION_JSON_VALUE])
   suspend fun createSummary(
     @RequestBody contents: List<Content>,

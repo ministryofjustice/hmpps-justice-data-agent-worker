@@ -5,7 +5,7 @@ import java.util.UUID
 
 interface RequestHistoryService {
 
-  suspend fun saveRequestHistory(request: RequestHistory)
+  suspend fun saveRequestHistory(request: RequestHistory): RequestHistory
 
   suspend fun getRequestHistoryById(id: UUID): RequestHistory
 

@@ -1,5 +1,7 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.model
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.data.annotation.Id
 import org.springframework.data.domain.Persistable
 import org.springframework.data.relational.core.mapping.Column
@@ -11,14 +13,19 @@ import java.util.*
 data class Prompt(
   @Id
   @JvmField
-  var id: UUID? = null,
+  var id: UUID,
   @Column()
   val promptKey: String,
   val description: String,
   val isDeleted: Boolean,
   val createdBy: UUID,
   val createdDate: LocalDateTime,
+  @Transient
+  @Value("false")
+  @JsonIgnore
+  var new: Boolean = true
 ) : Persistable<UUID> {
+
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (javaClass != other?.javaClass) return false
@@ -32,9 +39,6 @@ data class Prompt(
   override fun getId(): UUID? = this.id
 
   override fun isNew(): Boolean {
-    if (this.id == null) {
-      return true
-    }
-    return false
+    return new
   }
 }

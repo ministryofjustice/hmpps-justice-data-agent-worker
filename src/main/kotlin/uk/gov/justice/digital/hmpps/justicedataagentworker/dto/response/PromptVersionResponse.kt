@@ -4,7 +4,7 @@ import java.time.LocalDateTime
 import java.util.UUID
 
 data class PromptVersionResponse(
-  var id: UUID? = null,
+  var id: UUID,
   val version: Int,
 
   val promptId: UUID,
