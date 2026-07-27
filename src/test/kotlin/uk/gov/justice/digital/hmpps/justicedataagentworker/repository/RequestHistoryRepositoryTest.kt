@@ -9,7 +9,6 @@ import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
 import org.springframework.beans.factory.annotation.Autowired
-// import org.springframework.data.jpa.repository.config.EnableJpaRepositories
 import org.springframework.test.context.ActiveProfiles
 import uk.gov.justice.digital.hmpps.justicedataagentworker.integration.IntegrationTestBase
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.RequestHistory

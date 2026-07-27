@@ -23,8 +23,8 @@ class PromptServiceImpl(private val promptRepository: PromptRepository) : Prompt
     logger.info("saving prompt created by ${promptRequest.createdBy}")
     convertPromptRequestToEntity(promptRequest)
     var response: PromptResponse? = null
-    promptRepository.save(convertPromptRequestToEntity(promptRequest))?.let { entity->
-      response =  convertPromptToPromptResponse(entity)
+    promptRepository.save(convertPromptRequestToEntity(promptRequest))?.let { entity ->
+      response = convertPromptToPromptResponse(entity)
     }
     logger.info("returning prompt created by ${promptRequest.createdBy}")
     return response!!
@@ -45,26 +45,21 @@ class PromptServiceImpl(private val promptRepository: PromptRepository) : Prompt
     TODO("Not yet implemented")
   }
 
+  private fun convertPromptRequestToEntity(promptRequest: PromptRequest): Prompt = Prompt(
+    Generators.timeBasedEpochGenerator().generate(),
+    promptRequest.promptKey,
+    promptRequest.description,
+    false,
+    promptRequest.createdBy,
+    LocalDateTime.now(ZoneOffset.UTC),
+  )
 
-  private fun convertPromptRequestToEntity(promptRequest: PromptRequest) : Prompt {
-    return Prompt(
-      Generators.timeBasedEpochGenerator().generate(),
-      promptRequest.promptKey,
-      promptRequest.description,
-      false,
-      promptRequest.createdBy,
-      LocalDateTime.now(ZoneOffset.UTC),
-    )
-  }
-
-  private fun convertPromptToPromptResponse(prompt: Prompt) : PromptResponse {
-    return PromptResponse(
-      prompt.id,
-      prompt.promptKey,
-      prompt.description,
-      prompt.isDeleted,
-      prompt.createdBy,
-      prompt.createdDate
-    )
-  }
+  private fun convertPromptToPromptResponse(prompt: Prompt): PromptResponse = PromptResponse(
+    prompt.id,
+    prompt.promptKey,
+    prompt.description,
+    prompt.isDeleted,
+    prompt.createdBy,
+    prompt.createdDate,
+  )
 }

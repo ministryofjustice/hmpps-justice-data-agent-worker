@@ -7,7 +7,7 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaRespo
 interface JdaWorkerService {
   suspend fun analyzeData(prompt: Prompt, model: String, jsonSchema: String?, useWebClient: Boolean): Any
 
-  suspend fun handleSynchronousRequest(jdaRequest: JdaRequest) : JdaResponse
+  suspend fun handleSynchronousRequest(jdaRequest: JdaRequest): JdaResponse
 
-  suspend fun handleAsynchronousRequest(jdaRequest: JdaRequest) : JdaResponse
+  suspend fun handleAsynchronousRequest(jdaRequest: JdaRequest): JdaResponse
 }

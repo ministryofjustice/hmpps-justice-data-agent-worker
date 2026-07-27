@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.service
 
 import com.openai.models.chat.completions.ChatCompletion
-import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.client.ChatClientResponse
 import org.springframework.ai.chat.messages.SystemMessage
@@ -11,12 +10,8 @@ import org.springframework.stereotype.Service
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptVersionResponse
-import uk.gov.justice.digital.hmpps.justicedataagentworker.repository.PromptRepository
-import uk.gov.justice.digital.hmpps.justicedataagentworker.repository.PromptVersionRepository
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.integration.LiteLlmService
 import uk.gov.justice.digital.hmpps.justicedataagentworker.validator.JsonSchemaValidator
-import java.time.LocalDateTime
-import java.util.UUID
 
 @Service
 class JdaWorkerServiceImpl(
@@ -35,7 +30,6 @@ class JdaWorkerServiceImpl(
     jsonSchema: String?,
     useWebClient: Boolean,
   ): Any {
-
     var response = liteLlmService.connect(prompt, model, useWebClient)
     response = convertAiResponseToApiResponse(response)
     /*if (response is ChatCompletion) {
@@ -60,17 +54,18 @@ class JdaWorkerServiceImpl(
     return response!!
   }
 
-  override suspend fun handleSynchronousRequest(jdaRequest: JdaRequest) : JdaResponse {
+  override suspend fun handleSynchronousRequest(jdaRequest: JdaRequest): JdaResponse {
     var promptVersionResponse: PromptVersionResponse? = null
-    promptVersionService.getPromptVersionByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version)?.let {
-      version -> promptVersionResponse   = version
+    promptVersionService.getPromptVersionByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version)?.let { version ->
+      promptVersionResponse = version
     }
     val aiResponse = liteLlmService.connect(
       convertMessageToPrompt(
         promptVersionResponse!!.promptTemplate,
-        jdaRequest.requestData as String),
+        jdaRequest.requestData as String,
+      ),
       promptVersionResponse!!.llmModel,
-      false
+      false,
     )
     val response = convertAiResponseToApiResponse(aiResponse)
     return JdaResponse(
@@ -81,7 +76,7 @@ class JdaWorkerServiceImpl(
     )
   }
 
-  override suspend fun handleAsynchronousRequest(jdaRequest: JdaRequest) : JdaResponse {
+  override suspend fun handleAsynchronousRequest(jdaRequest: JdaRequest): JdaResponse {
     TODO("Not yet implemented")
   }
 
@@ -111,5 +106,4 @@ class JdaWorkerServiceImpl(
     }
     return response
   }
-
 }

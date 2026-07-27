@@ -4,7 +4,6 @@ package uk.gov.justice.digital.hmpps.justicedataagentworker.repository
 import org.springframework.data.repository.kotlin.CoroutineCrudRepository
 import org.springframework.data.repository.kotlin.CoroutineSortingRepository
 import org.springframework.stereotype.Repository
-import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptVersionResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.PromptVersion
 import java.util.UUID
 
@@ -12,5 +11,5 @@ import java.util.UUID
 interface PromptVersionRepository :
   CoroutineCrudRepository<PromptVersion, UUID>,
   CoroutineSortingRepository<PromptVersion, UUID> {
-    suspend fun findPromptVersionByPromptIdAndVersion(promptId: UUID, version: Int): PromptVersion
-  }
+  suspend fun findPromptVersionByPromptIdAndVersion(promptId: UUID, version: Int): PromptVersion
+}

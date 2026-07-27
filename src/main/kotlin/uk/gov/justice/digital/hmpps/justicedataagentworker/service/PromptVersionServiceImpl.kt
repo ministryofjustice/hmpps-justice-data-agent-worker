@@ -38,7 +38,7 @@ class PromptVersionServiceImpl(
 
     val promptVersion = convertPromptVersionRequestToEntity(promptVersionRequest)
     promptVersionRepository.save(promptVersion)?.let { entity ->
-      promptVersionResponse =  convertEntityToPromptVersionResponse(entity)
+      promptVersionResponse = convertEntityToPromptVersionResponse(entity)
     }
     return promptVersionResponse!!
   }
@@ -75,7 +75,7 @@ class PromptVersionServiceImpl(
     TODO("Not yet implemented")
   }
 
-  private fun convertPromptVersionRequestToEntity(promptVersionRequest: PromptVersionRequest) : PromptVersion {
+  private fun convertPromptVersionRequestToEntity(promptVersionRequest: PromptVersionRequest): PromptVersion {
     val responseFormat =
       if (promptVersionRequest.responseContract != null) Json.of(promptVersionRequest.responseContract) else null
     return PromptVersion(
@@ -91,17 +91,15 @@ class PromptVersionServiceImpl(
     )
   }
 
-  private fun convertEntityToPromptVersionResponse(promptVersion: PromptVersion): PromptVersionResponse {
-    return PromptVersionResponse(
-      promptVersion.id,
-      promptVersion.version,
-      promptVersion.promptId,
-      promptVersion.llmModel,
-      promptVersion.promptTemplate,
-      promptVersion.requestContract.toString(),
-      promptVersion.requestContract.toString(),
-      promptVersion.createdBy,
-      promptVersion.createdDate,
-    )
-  }
+  private fun convertEntityToPromptVersionResponse(promptVersion: PromptVersion): PromptVersionResponse = PromptVersionResponse(
+    promptVersion.id,
+    promptVersion.version,
+    promptVersion.promptId,
+    promptVersion.llmModel,
+    promptVersion.promptTemplate,
+    promptVersion.requestContract.toString(),
+    promptVersion.requestContract.toString(),
+    promptVersion.createdBy,
+    promptVersion.createdDate,
+  )
 }
