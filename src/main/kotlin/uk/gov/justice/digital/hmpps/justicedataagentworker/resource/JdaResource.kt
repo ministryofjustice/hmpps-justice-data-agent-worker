@@ -20,7 +20,7 @@ class JdaResource(private val jdaWorkerService: JdaWorkerService) {
 
   // This endpoint is for test purpose only for developer
   @PostMapping("v1/chat/completion", consumes = [APPLICATION_JSON_VALUE], produces = [APPLICATION_JSON_VALUE])
-  fun createSummary(
+  suspend fun createSummary(
     @RequestBody contents: List<Content>,
     @RequestParam(required = true) verifyOutputSchema: Boolean,
     @RequestParam(required = true) useWebClient: Boolean,

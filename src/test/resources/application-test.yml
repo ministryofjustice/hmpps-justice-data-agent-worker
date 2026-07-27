@@ -22,21 +22,38 @@ spring:
         base-url: http://localhost:8091
         model: test-model-x
         store: false
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: false
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.H2Dialect
+  r2dbc:
+    pool:
+      enabled: true
+  #url: r2dbc:pool:postgresql://localhost/jdatest?sslMode=prefer
+    #username: sa
+    #password: password
+  #jpa:
+    #hibernate:
+      #ddl-auto: update
+    #show-sql: false
+    #properties:
+      #hibernate:
+        #dialect: org.hibernate.dialect.H2Dialect
     #defer-datasource-initialization: true
-  datasource:
-    username: sa
-    password: password
-    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
-    driver-class-name: org.h2.Driver
+  #datasource:
+    #username: sa
+    #password: password
+    #url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
+    #driver-class-name: org.h2.Driver
   flyway:
-    enabled: false
+    enabled: true
+    #url: jdbc:postgresql://localhost/jdatest?sslmode=prefer
+    #user: sa
+    #password: test
+    locations: classpath:db/migration/dev
+    baseline-on-migrate: true
+
+
+logging:
+  level:
+    db:
+      migration: DEBUG
 
 hmpps:
   #sqs:

@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.utility
 
 import com.fasterxml.uuid.Generators
+import io.r2dbc.postgresql.codec.Json
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.Prompt
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.PromptVersion
 import java.time.LocalDateTime
@@ -93,21 +94,21 @@ class DataGenerator {
     fun buildPrompt(promptVersion: MutableSet<PromptVersion>): Prompt = Prompt(
       Generators.timeBasedEpochGenerator().generate(),
       UUID.randomUUID().toString(),
-      promptVersion,
+      // promptVersion,
       "Inline instruction  FOR LLM",
       false,
       UUID.randomUUID(),
       LocalDateTime.now(ZoneOffset.UTC),
     )
 
-    fun buildPromptVersion(prompt: Prompt, requestJsonSchema: String, responseJsonSchema: String): PromptVersion = PromptVersion(
+    fun buildPromptVersion(promptId: UUID, requestJsonSchema: String, responseJsonSchema: String): PromptVersion = PromptVersion(
       Generators.timeBasedEpochGenerator().generate(),
       1,
-      prompt,
+      promptId,
       "Test-Model-x1",
       "Inline instruction  FOR LLM",
-      false,
-      responseJsonSchema,
+      Json.of(requestJsonSchema),
+      Json.of(responseJsonSchema),
       UUID.randomUUID(),
       LocalDateTime.now(ZoneOffset.UTC),
     )

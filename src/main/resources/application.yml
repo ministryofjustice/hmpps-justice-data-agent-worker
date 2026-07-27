@@ -5,19 +5,28 @@ info.app:
 spring:
   application:
     name: hmpps-justice-data-agent-worker
-  jpa:
-    defer-datasource-initialization: false
-    hibernate:
-      ddl-auto: none
-    properties:
-      hibernate:
-        c3p0:
-          timeout: 20000
-        dialect: org.hibernate.dialect.PostgreSQLDialect
-  datasource:
+  data:
+    r2dbc:
+      repositories:
+        enabled: true
+  r2dbc:
+    url: r2dbc:pool:postgresql://${DB_ENDPOINT}/${DB_NAME}?sslMode=prefer
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
-    url: jdbc:postgresql://${DB_ENDPOINT}/${DB_NAME}?sslmode=prefer
+
+  #jpa:
+    #defer-datasource-initialization: false
+    #hibernate:
+      #ddl-auto: none
+    #properties:
+      #hibernate:
+        #c3p0:
+          #timeout: 20000
+        #dialect: org.hibernate.dialect.PostgreSQLDialect
+  #datasource:
+    #username: ${DB_USERNAME}
+    #password: ${DB_PASSWORD}
+    #url: r2dbc:pool:postgresql://${DB_ENDPOINT}/${DB_NAME}
   flyway:
     enabled: true
     url: jdbc:postgresql://${DB_ENDPOINT}/${DB_NAME}?sslmode=prefer
@@ -99,6 +108,6 @@ hmpps:
 
 springdoc:
   api-docs:
-    enabled: false
+    enabled: true
   swagger-ui:
-    enabled: false
+    enabled: true
