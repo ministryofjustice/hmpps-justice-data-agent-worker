@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.service
 
-import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.NotFoundException
@@ -17,7 +16,7 @@ class RequestHistoryServiceImpl(private val requestHistoryRepository: RequestHis
 
   override suspend fun saveRequestHistory(request: RequestHistory): RequestHistory {
     logger.info("saving request history for correlation id: ${request.correlationId}")
-    val entity =  requestHistoryRepository.save(request)
+    val entity = requestHistoryRepository.save(request)
     return entity
   }
 

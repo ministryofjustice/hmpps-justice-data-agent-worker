@@ -2,7 +2,6 @@ package uk.gov.justice.digital.hmpps.justicedataagentworker.service
 
 import com.fasterxml.uuid.Generators
 import io.r2dbc.postgresql.codec.Json
-import org.hibernate.reactive.common.Identifier.id
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptVersionRequest
@@ -83,18 +82,17 @@ class PromptVersionServiceImpl(
     )
   }
 
-  private fun convertEntityToPromptVersionResponse(promptVersion: PromptVersion): PromptVersionResponse =
-    PromptVersionResponse(
-      promptVersion.id!!,
-      promptVersion.version,
-      promptVersion.promptId,
-      promptVersion.llmModel,
-      promptVersion.promptTemplate,
-      promptVersion.requestContract.toString(),
-      promptVersion.requestContract.toString(),
-      promptVersion.createdBy,
-      promptVersion.createdDate,
-    )
+  private fun convertEntityToPromptVersionResponse(promptVersion: PromptVersion): PromptVersionResponse = PromptVersionResponse(
+    promptVersion.id!!,
+    promptVersion.version,
+    promptVersion.promptId,
+    promptVersion.llmModel,
+    promptVersion.promptTemplate,
+    promptVersion.requestContract.asString(),
+    promptVersion.responseContract?.asString(),
+    promptVersion.createdBy,
+    promptVersion.createdDate,
+  )
 
   fun buildPrompt(promptVersion: MutableSet<PromptVersion>): Prompt = Prompt(
     Generators.timeBasedEpochGenerator().generate(),

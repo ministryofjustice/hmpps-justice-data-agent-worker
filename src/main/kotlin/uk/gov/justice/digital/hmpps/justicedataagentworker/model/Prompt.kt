@@ -23,7 +23,7 @@ data class Prompt(
   @Transient
   @Value("false")
   @JsonIgnore
-  var new: Boolean = true
+  var new: Boolean = true,
 ) : Persistable<UUID> {
 
   override fun equals(other: Any?): Boolean {
@@ -38,7 +38,5 @@ data class Prompt(
   override fun hashCode(): Int = id.hashCode()
   override fun getId(): UUID? = this.id
 
-  override fun isNew(): Boolean {
-    return new
-  }
+  override fun isNew(): Boolean = new
 }

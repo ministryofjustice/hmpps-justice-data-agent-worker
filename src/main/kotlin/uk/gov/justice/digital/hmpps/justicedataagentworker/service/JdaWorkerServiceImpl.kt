@@ -2,20 +2,18 @@ package uk.gov.justice.digital.hmpps.justicedataagentworker.service
 
 import com.fasterxml.uuid.Generators
 import com.openai.models.chat.completions.ChatCompletion
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import io.swagger.v3.core.util.Json
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.client.ChatClientResponse
 import org.springframework.ai.chat.messages.SystemMessage
 import org.springframework.ai.chat.messages.UserMessage
 import org.springframework.ai.chat.prompt.Prompt
 import org.springframework.stereotype.Service
+import tools.jackson.databind.ObjectMapper
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaResponse
-import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptVersionResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.LiteLlmException
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.RequestHistory
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.Status
@@ -30,7 +28,7 @@ class JdaWorkerServiceImpl(
   private val jsonSchemaValidator: JsonSchemaValidator,
   private val liteLlmService: LiteLlmService,
   private val promptVersionService: PromptVersionService,
-  private val requestHistoryService: RequestHistoryService
+  private val requestHistoryService: RequestHistoryService,
 ) : JdaWorkerService {
 
   companion object {
@@ -55,8 +53,11 @@ class JdaWorkerServiceImpl(
   override suspend fun handleSynchronousRequest(jdaRequest: JdaRequest): JdaResponse {
     var promptVersionResponse = promptVersionService.getPromptVersionByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version)
     val time = LocalDateTime.now(ZoneOffset.UTC)
-    var requestHistory : RequestHistory? = null
+    var requestHistory: RequestHistory? = null
     var aiResponse: Any? = null
+    var inputJson = jdaRequest.requestData
+    inputJson = Json.pretty(inputJson)
+    jsonSchemaValidator.validateJson(promptVersionResponse.requestContract, inputJson)
     requestHistory = RequestHistory(
       Generators.timeBasedEpochGenerator().generate(),
       true,
@@ -67,25 +68,27 @@ class JdaWorkerServiceImpl(
       null,
       Status.QUEUED,
       null,
-      null
+      null,
     )
     coroutineScope {
       launch {
         requestHistoryService.saveRequestHistory(requestHistory)
       }
-      launch { aiResponse = liteLlmService.connect(
-        convertMessageToPrompt(
-          promptVersionResponse!!.promptTemplate,
-          jdaRequest.requestData as String,
-        ),
-        promptVersionResponse.llmModel,
-        false,
-      ) }
+      launch {
+        aiResponse = liteLlmService.connect(
+          convertMessageToPrompt(
+            promptVersionResponse!!.promptTemplate,
+            inputJson,
+          ),
+          promptVersionResponse.llmModel,
+          false,
+        )
+      }
     }
     try {
       val response = convertAiResponseToApiResponse(aiResponse!!)
       if (promptVersionResponse.responseContract != null) {
-        // jsonSchemaValidator.validateJson(promptVersionResponse.responseContract, promptVersionResponse.responseContract.trimIndent())
+        jsonSchemaValidator.validateJson(promptVersionResponse.responseContract, response as String)
       }
       // requestHistory = requestHistoryService.getRequestHistoryById(requestHistory.id!!)
       requestHistory?.new = false
@@ -96,7 +99,7 @@ class JdaWorkerServiceImpl(
         UUID.randomUUID(),
         jdaRequest.correlationId,
         jdaRequest.prompt,
-        response,
+        ObjectMapper().readTree(response as String),
       )
     } catch (e: Exception) {
       logger.error("Error processing connecting to lite llm: {}", e)
@@ -140,5 +143,4 @@ class JdaWorkerServiceImpl(
     }
     return response
   }
-
 }

@@ -28,7 +28,7 @@ data class PromptVersion(
   @Transient
   @Value("false")
   @JsonIgnore
-  var new: Boolean = true
+  var new: Boolean = true,
 ) : Persistable<UUID> {
 
   override fun equals(other: Any?): Boolean {
@@ -44,7 +44,5 @@ data class PromptVersion(
 
   override fun getId(): UUID? = this.id
 
-  override fun isNew(): Boolean {
-    return new
-  }
+  override fun isNew(): Boolean = new
 }
