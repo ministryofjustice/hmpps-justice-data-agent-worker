@@ -44,7 +44,7 @@ class PromptServiceImpl(
     if (promptVersion != null) {
       version = promptVersion.version + 1
     }
-    promptVersion = convertPromptVersionRequestToEntity(promptEntity.id,promptEntity.createdBy, version, promptRequest.promptVersion )
+    promptVersion = convertPromptVersionRequestToEntity(promptEntity.id, promptEntity.createdBy, version, promptRequest.promptVersion)
     val promptVersionEntity = promptVersionRepository.save(promptVersion)
     logger.info("returning prompt created by ${promptRequest.createdBy}")
     return convertPromptToPromptResponse(promptEntity, promptVersionEntity)
@@ -60,7 +60,7 @@ class PromptServiceImpl(
     promptEntity = promptRepository.save(promptEntity)
     var promptVersion = promptVersionRepository.findFirstByPromptIdOrderByVersionDesc(promptEntity.id)
     val version = promptVersion?.version?.plus(1)
-    promptVersion = convertPromptVersionRequestToEntity(promptEntity.id,promptEntity.createdBy, version!!, promptRequest.promptVersion )
+    promptVersion = convertPromptVersionRequestToEntity(promptEntity.id, promptEntity.createdBy, version!!, promptRequest.promptVersion)
     val promptVersionEntity = promptVersionRepository.save(promptVersion)
     logger.info("returning prompt created by ${promptRequest.createdBy}")
     return convertPromptToPromptResponse(promptEntity, promptVersionEntity)
@@ -68,8 +68,8 @@ class PromptServiceImpl(
 
   override suspend fun getPrompts(): List<PromptsResponse> {
     val prompts = mutableListOf<Prompt>()
-    promptRepository.findAll().collect{prompt -> prompts.add(prompt)}
-    prompts.stream().consumeAsFlow().collect{ prompt ->
+    promptRepository.findAll().collect { prompt -> prompts.add(prompt) }
+    prompts.stream().consumeAsFlow().collect { prompt ->
       promptVersionRepository.findPromptVersionsByPromptIdOrderByVersionAsc(prompt.id)
     }
     val promptsResponse = mutableListOf<PromptsResponse>()
@@ -83,8 +83,9 @@ class PromptServiceImpl(
           prompt.isDeleted,
           prompt.createdBy,
           prompt.createdDate,
-          convertPromptsToPromptsResponse(prt)
-        ))
+          convertPromptsToPromptsResponse(prt),
+        ),
+      )
     }
     return promptsResponse
   }
@@ -98,7 +99,7 @@ class PromptServiceImpl(
     if (promptVersion == null) {
       throw NotFoundException("Prompt with version $version not found.")
     }
-    return  convertPromptToPromptResponse(prompt = prompt, promptVersion = promptVersion)
+    return convertPromptToPromptResponse(prompt = prompt, promptVersion = promptVersion)
   }
 
   override suspend fun getPromptByKey(key: String): PromptResponse {
@@ -107,7 +108,7 @@ class PromptServiceImpl(
       throw NotFoundException("Prompt with key $key not found.")
     }
     val version = promptVersionRepository.findFirstByPromptIdOrderByVersionDesc(prompt?.id!!)
-    return  convertPromptToPromptResponse(prompt = prompt, promptVersion = version!!)
+    return convertPromptToPromptResponse(prompt = prompt, promptVersion = version!!)
   }
 
   override suspend fun deletePromptByKey(key: String) {
@@ -129,40 +130,36 @@ class PromptServiceImpl(
     LocalDateTime.now(ZoneOffset.UTC),
   )
 
-  fun convertPromptVersionRequestToEntity(promptId: UUID, createdBy: UUID, version: Int,  promptVersionRequest: PromptVersionRequest): PromptVersion {
-    return PromptVersion(
-      Generators.timeBasedEpochGenerator().generate(),
-      version,
-      promptId,
-      promptVersionRequest.llmModel,
-      promptVersionRequest.promptTemplate,
-      Json.of(promptVersionRequest.requestContract),
-      promptVersionRequest.responseContract?.let { Json.of(it) },
-      createdBy,
-      LocalDateTime.now(ZoneOffset.UTC),
-    )
-  }
+  fun convertPromptVersionRequestToEntity(promptId: UUID, createdBy: UUID, version: Int, promptVersionRequest: PromptVersionRequest): PromptVersion = PromptVersion(
+    Generators.timeBasedEpochGenerator().generate(),
+    version,
+    promptId,
+    promptVersionRequest.llmModel,
+    promptVersionRequest.promptTemplate,
+    Json.of(promptVersionRequest.requestContract),
+    promptVersionRequest.responseContract?.let { Json.of(it) },
+    createdBy,
+    LocalDateTime.now(ZoneOffset.UTC),
+  )
 
-  private fun convertPromptToPromptResponse(prompt: Prompt, promptVersion: PromptVersion): PromptResponse {
-    return PromptResponse(
-      prompt.id,
-      prompt.promptKey,
-      prompt.description,
-      prompt.isDeleted,
-      prompt.createdBy,
-      prompt.createdDate,
-      PromptVersionResponse(
-        promptVersion.id,
-        promptVersion.version,
-        promptVersion.llmModel,
-        promptVersion.promptTemplate,
-        promptVersion.requestContract.asString(),
-        promptVersion.responseContract?.let { it.asString() },
-        promptVersion.createdBy,
-        promptVersion.createdDate,
-      )
-    )
-  }
+  private fun convertPromptToPromptResponse(prompt: Prompt, promptVersion: PromptVersion): PromptResponse = PromptResponse(
+    prompt.id,
+    prompt.promptKey,
+    prompt.description,
+    prompt.isDeleted,
+    prompt.createdBy,
+    prompt.createdDate,
+    PromptVersionResponse(
+      promptVersion.id,
+      promptVersion.version,
+      promptVersion.llmModel,
+      promptVersion.promptTemplate,
+      promptVersion.requestContract.asString(),
+      promptVersion.responseContract?.let { it.asString() },
+      promptVersion.createdBy,
+      promptVersion.createdDate,
+    ),
+  )
 
   private fun convertPromptsToPromptsResponse(promptVersions: List<PromptVersion>): List<PromptVersionResponse> {
     val promptVersionsResponse = mutableListOf<PromptVersionResponse>()
@@ -177,11 +174,9 @@ class PromptServiceImpl(
           promptVersion.responseContract?.let { it.asString() },
           promptVersion.createdBy,
           promptVersion.createdDate,
-        )
+        ),
       )
     }
     return promptVersionsResponse
   }
-
-
 }

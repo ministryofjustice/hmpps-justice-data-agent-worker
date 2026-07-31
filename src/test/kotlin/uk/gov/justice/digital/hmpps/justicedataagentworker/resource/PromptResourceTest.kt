@@ -1,40 +1,33 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.resource
 
-import kotlinx.coroutines.runBlocking
-import org.junit.jupiter.api.AfterEach
-import org.junit.jupiter.api.Assertions
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.AfterAllCallback
-import org.junit.jupiter.api.extension.BeforeAllCallback
-import org.junit.jupiter.api.extension.ExtensionContext
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
-import org.springframework.web.reactive.function.client.WebClient
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptVersionRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptsResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.integration.IntegrationTestBase
-import uk.gov.justice.digital.hmpps.justicedataagentworker.model.Prompt
 import uk.gov.justice.digital.hmpps.justicedataagentworker.repository.PromptRepository
 import uk.gov.justice.digital.hmpps.justicedataagentworker.repository.PromptVersionRepository
 import uk.gov.justice.digital.hmpps.justicedataagentworker.utility.DataGenerator
 import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
 import java.time.Duration
-import java.time.LocalDateTime
-import java.time.ZoneOffset
 import java.util.UUID
 import kotlin.random.Random
 
 class PromptResourceTest : IntegrationTestBase() {
   @Autowired private lateinit var promptRepository: PromptRepository
-  @Autowired  private lateinit var promptVersionRepository: PromptVersionRepository
+
+  @Autowired private lateinit var promptVersionRepository: PromptVersionRepository
   private val promptKey = UUID.randomUUID().toString()
   private val createdBy = UUID.randomUUID()
+
   @BeforeEach
   fun setup() {
     webTestClient = webTestClient
@@ -55,9 +48,9 @@ class PromptResourceTest : IntegrationTestBase() {
             "TEST-MODEL-5",
             "Get json output of firstname and lastname.",
             DataGenerator.jsonRequestSchema,
-            DataGenerator.jsonResponseSchema
-          )
-        )
+            DataGenerator.jsonResponseSchema,
+          ),
+        ),
       )
       .accept(MediaType.APPLICATION_JSON)
       .exchange()
@@ -93,9 +86,9 @@ class PromptResourceTest : IntegrationTestBase() {
             "TEST-MODEL-5",
             "Get json output of firstname and lastname.",
             DataGenerator.jsonRequestSchema,
-            DataGenerator.jsonResponseSchema
-          )
-        )
+            DataGenerator.jsonResponseSchema,
+          ),
+        ),
       )
       .accept(MediaType.APPLICATION_JSON)
       .exchange()
@@ -159,7 +152,7 @@ class PromptResourceTest : IntegrationTestBase() {
 
   @Test
   fun `get Prompt by key`() {
-    val res = webTestClient.get().uri("/v1/prompts/${promptKey}")
+    val res = webTestClient.get().uri("/v1/prompts/$promptKey")
       .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
       .header("Content-Type", "application/json")
       .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
@@ -192,7 +185,7 @@ class PromptResourceTest : IntegrationTestBase() {
 
   @Test
   fun `get prompt by key And version`() {
-    val res = webTestClient.get().uri("/v1/prompts/${promptKey}/versions/1")
+    val res = webTestClient.get().uri("/v1/prompts/$promptKey/versions/1")
       .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
       .header("Content-Type", "application/json")
       .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
@@ -222,5 +215,4 @@ class PromptResourceTest : IntegrationTestBase() {
       .returnResult()
       .responseBody as ErrorResponse
   }
-
 }

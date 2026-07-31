@@ -7,7 +7,6 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.model.Prompt
 import java.util.*
 
 @Repository
-interface PromptRepository :
-  CoroutineCrudRepository<Prompt, UUID> {
+interface PromptRepository : CoroutineCrudRepository<Prompt, UUID> {
   suspend fun findPromptByPromptKeyAndIsDeleted(promptKey: String, isDeleted: Boolean): Prompt?
 }

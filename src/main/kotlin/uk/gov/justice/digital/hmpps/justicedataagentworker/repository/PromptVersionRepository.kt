@@ -15,5 +15,4 @@ interface PromptVersionRepository :
   suspend fun findFirstByPromptIdOrderByVersionDesc(promptId: UUID): PromptVersion?
 
   suspend fun findPromptVersionsByPromptIdOrderByVersionAsc(promptId: UUID): List<PromptVersion>
-
 }

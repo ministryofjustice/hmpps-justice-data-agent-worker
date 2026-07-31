@@ -57,7 +57,7 @@ class JdaWorkerServiceImpl(
     var aiResponse: Any? = null
     var inputJson = jdaRequest.requestData
     inputJson = Json.pretty(inputJson)
-    jsonSchemaValidator.validateJson(promptVersionResponse.promptVersion .requestContract, inputJson)
+    jsonSchemaValidator.validateJson(promptVersionResponse.promptVersion.requestContract, inputJson)
     requestHistory = RequestHistory(
       Generators.timeBasedEpochGenerator().generate(),
       true,

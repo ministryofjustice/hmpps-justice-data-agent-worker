@@ -10,5 +10,5 @@ data class PromptsResponse(
   val isDeleted: Boolean,
   val createdBy: UUID,
   val createdDate: LocalDateTime,
-  val promptVersions: List<PromptVersionResponse>
+  val promptVersions: List<PromptVersionResponse>,
 )

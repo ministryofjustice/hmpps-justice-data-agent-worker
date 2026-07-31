@@ -11,7 +11,6 @@ import org.springframework.ai.chat.prompt.Prompt
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.http.ResponseEntity
-import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestParam
@@ -47,7 +46,7 @@ class JdaResource(private val jdaWorkerService: JdaWorkerService) {
     ],
   )
   @PostMapping("v1/chat/jda/worker", consumes = [APPLICATION_JSON_VALUE], produces = [APPLICATION_JSON_VALUE])
-  //@PreAuthorize("hasAnyRole('JUSTICE_DATA_AGENT_REQUESTS')")
+  // @PreAuthorize("hasAnyRole('JUSTICE_DATA_AGENT_REQUESTS')")
   suspend fun analyze(
     @RequestBody jdaRequest: JdaRequest,
   ): ResponseEntity<JdaResponse> {

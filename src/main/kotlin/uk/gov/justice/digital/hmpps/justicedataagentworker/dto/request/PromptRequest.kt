@@ -6,5 +6,5 @@ data class PromptRequest(
   val promptKey: String,
   val description: String,
   val createdBy: UUID,
-  val promptVersion: PromptVersionRequest
+  val promptVersion: PromptVersionRequest,
 )

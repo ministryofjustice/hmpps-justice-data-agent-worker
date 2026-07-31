@@ -1,17 +1,12 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.service
 
-import com.fasterxml.uuid.Generators
-import io.r2dbc.postgresql.codec.Json
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptVersionRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptVersionResponse
-import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.NotFoundException
-import uk.gov.justice.digital.hmpps.justicedataagentworker.model.Prompt
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.PromptVersion
 import uk.gov.justice.digital.hmpps.justicedataagentworker.repository.PromptRepository
 import uk.gov.justice.digital.hmpps.justicedataagentworker.repository.PromptVersionRepository
-
 import java.util.UUID
 
 @Service
