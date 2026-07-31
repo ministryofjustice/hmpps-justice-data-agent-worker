@@ -10,7 +10,7 @@ import java.util.UUID
 interface PromptVersionRepository :
   CoroutineCrudRepository<PromptVersion, UUID>,
   CoroutineSortingRepository<PromptVersion, UUID> {
-  suspend fun findPromptVersionByPromptIdAndVersion(promptId: UUID, version: Int): PromptVersion
+  suspend fun findPromptVersionByPromptIdAndVersion(promptId: UUID, version: Int): PromptVersion?
 
   suspend fun findFirstByPromptIdOrderByVersionDesc(promptId: UUID): PromptVersion?
 

@@ -101,6 +101,16 @@ class DataGenerator {
       LocalDateTime.now(ZoneOffset.UTC),
     )
 
+    fun buildPrompt(key: String, createdBy: UUID): Prompt = Prompt(
+      Generators.timeBasedEpochGenerator().generate(),
+      key,
+      // promptVersion,
+      "Inline instruction  FOR LLM",
+      false,
+      createdBy,
+      LocalDateTime.now(ZoneOffset.UTC),
+    )
+
     fun buildPromptVersion(promptId: UUID, requestJsonSchema: String, responseJsonSchema: String): PromptVersion = PromptVersion(
       Generators.timeBasedEpochGenerator().generate(),
       1,

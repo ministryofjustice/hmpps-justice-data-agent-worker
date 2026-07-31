@@ -14,7 +14,6 @@ data class Prompt(
   @Id
   @JvmField
   var id: UUID,
-  @Column()
   val promptKey: String,
   val description: String,
   var isDeleted: Boolean,

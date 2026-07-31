@@ -11,6 +11,8 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptVer
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptVersionResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptsResponse
+import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.NotFoundException
+import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.RecordAlreadyExist
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.Prompt
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.PromptVersion
 import uk.gov.justice.digital.hmpps.justicedataagentworker.repository.PromptRepository
@@ -31,9 +33,9 @@ class PromptServiceImpl(
 
   override suspend fun savePrompt(promptRequest: PromptRequest): PromptResponse {
     logger.info("saving prompt created by ${promptRequest.createdBy}")
-    val prompt = promptRepository.findPromptByPromptKey(promptRequest.promptKey)
+    val prompt = promptRepository.findPromptByPromptKeyAndIsDeleted(promptRequest.promptKey, false)
     if (prompt != null) {
-      throw IllegalArgumentException("Prompt with key ${promptRequest.promptKey} already exists.")
+      throw RecordAlreadyExist("Prompt with key ${promptRequest.promptKey} already exists.")
     }
     var promptEntity = convertPromptRequestToEntity(promptRequest)
     promptEntity = promptRepository.save(promptEntity)
@@ -50,9 +52,9 @@ class PromptServiceImpl(
 
   override suspend fun updatePrompt(key: String, promptRequest: PromptRequest): PromptResponse {
     logger.info("saving prompt created by ${promptRequest.createdBy}")
-    val prompt = promptRepository.findPromptByPromptKey(promptRequest.promptKey)
+    val prompt = promptRepository.findPromptByPromptKeyAndIsDeleted(promptRequest.promptKey, false)
     if (prompt == null) {
-      throw IllegalArgumentException("Prompt with key ${promptRequest.promptKey} ado not exist.")
+      throw NotFoundException("Prompt with key ${promptRequest.promptKey} ado not exist.")
     }
     var promptEntity = convertPromptRequestToEntity(promptRequest)
     promptEntity = promptRepository.save(promptEntity)
@@ -88,27 +90,30 @@ class PromptServiceImpl(
   }
 
   override suspend fun getPromptsByKeyAndVersion(key: String, version: Int): PromptResponse {
-    val prompt = promptRepository.findPromptByPromptKey(key)
-    if (prompt != null) {
-      throw IllegalArgumentException("Prompt with key $key not found.")
+    val prompt = promptRepository.findPromptByPromptKeyAndIsDeleted(key, false)
+    if (prompt == null) {
+      throw NotFoundException("Prompt with key $key not found.")
     }
-    val version = promptVersionRepository.findFirstByPromptIdOrderByVersionDesc(prompt?.id!!)
-    return  convertPromptToPromptResponse(prompt = prompt, promptVersion = version!!)
+    val promptVersion = promptVersionRepository.findPromptVersionByPromptIdAndVersion(prompt.id, version)
+    if (promptVersion == null) {
+      throw NotFoundException("Prompt with version $version not found.")
+    }
+    return  convertPromptToPromptResponse(prompt = prompt, promptVersion = promptVersion)
   }
 
   override suspend fun getPromptByKey(key: String): PromptResponse {
-    val prompt = promptRepository.findPromptByPromptKey(key)
-    if (prompt != null) {
-      throw IllegalArgumentException("Prompt with key $key not found.")
+    val prompt = promptRepository.findPromptByPromptKeyAndIsDeleted(key, false)
+    if (prompt == null) {
+      throw NotFoundException("Prompt with key $key not found.")
     }
     val version = promptVersionRepository.findFirstByPromptIdOrderByVersionDesc(prompt?.id!!)
     return  convertPromptToPromptResponse(prompt = prompt, promptVersion = version!!)
   }
 
   override suspend fun deletePromptByKey(key: String) {
-    val prompt = promptRepository.findPromptByPromptKey(key)
+    val prompt = promptRepository.findPromptByPromptKeyAndIsDeleted(key, false)
     if (prompt == null) {
-      throw IllegalArgumentException("Prompt with key $key not found.")
+      throw NotFoundException("Prompt with key $key not found.")
     }
     prompt.isDeleted = true
     prompt.new = false
