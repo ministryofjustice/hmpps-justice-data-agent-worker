@@ -3,23 +3,21 @@ package uk.gov.justice.digital.hmpps.justicedataagentworker.resource
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.PutMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RestController
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptRequest
-import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptVersionRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptResponse
-import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptVersionResponse
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptsResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.PromptService
-import uk.gov.justice.digital.hmpps.justicedataagentworker.service.PromptVersionService
-import java.util.UUID
 
 @RestController
 class PromptResource(
   private val promptService: PromptService,
-  private val promptVersionService: PromptVersionService,
 ) {
 
   @PostMapping("/prompts")
@@ -29,24 +27,40 @@ class PromptResource(
     return ResponseEntity.status(HttpStatus.CREATED).body(prompt)
   }
 
-  @GetMapping("/prompts/{id}")
+  @PutMapping("/prompts/{key}")
   @PreAuthorize("hasAnyRole('JUSTICE_DATA_AGENT_PROMPTS')")
-  suspend fun getPromptById(@PathVariable id: UUID): ResponseEntity<PromptResponse> {
-    val prompt = promptService.getPromptById(id)
+  suspend fun updatePrompt(@RequestBody promptRequest: PromptRequest, @PathVariable key: String): ResponseEntity<PromptResponse> {
+    val prompt = promptService.updatePrompt(key, promptRequest)
     return ResponseEntity.status(HttpStatus.CREATED).body(prompt)
   }
 
-  @PostMapping("/promptversions")
+  @GetMapping("/prompts")
   @PreAuthorize("hasAnyRole('JUSTICE_DATA_AGENT_PROMPTS')")
-  suspend fun createPromptVersion(@RequestBody promptVersionRequest: PromptVersionRequest): ResponseEntity<PromptVersionResponse> {
-    val promptVersion = promptVersionService.savePromptVersion(promptVersionRequest)
-    return ResponseEntity.status(HttpStatus.CREATED).body(promptVersion)
+  suspend fun getPrompts(): ResponseEntity<List<PromptsResponse>> {
+    val prompt = promptService.getPrompts()
+    return ResponseEntity.status(HttpStatus.CREATED).body(prompt)
   }
 
-  @GetMapping("/promptversions/{id}")
+  @GetMapping("/prompts/{key}")
   @PreAuthorize("hasAnyRole('JUSTICE_DATA_AGENT_PROMPTS')")
-  suspend fun getPromptVersionById(@PathVariable id: UUID): ResponseEntity<PromptVersionResponse> {
-    val promptVersion = promptVersionService.getPromptVersionById(id)
-    return ResponseEntity.status(HttpStatus.CREATED).body(promptVersion)
+  suspend fun getPromptByKey(@RequestBody promptRequest: PromptRequest, @PathVariable key: String): ResponseEntity<PromptResponse> {
+    val prompt = promptService.getPromptByKey(key)
+    return ResponseEntity.status(HttpStatus.OK).body(prompt)
   }
+
+  @GetMapping("/prompts/{key}/versions/{version}")
+  @PreAuthorize("hasAnyRole('JUSTICE_DATA_AGENT_PROMPTS')")
+  suspend fun getPromptByKeyAndVersion(@PathVariable key: String, @PathVariable version: Int): ResponseEntity<PromptResponse> {
+    val prompt = promptService.getPromptsByKeyAndVersion(key, version)
+    return ResponseEntity.status(HttpStatus.CREATED).body(prompt)
+  }
+
+
+  @DeleteMapping("/prompts/{key}")
+  @PreAuthorize("hasAnyRole('JUSTICE_DATA_AGENT_PROMPTS')")
+  suspend fun getPromptById(@PathVariable key: String): ResponseEntity<Void> {
+    promptService.deletePromptByKey(key)
+    return ResponseEntity.status(HttpStatus.OK).build()
+  }
+
 }

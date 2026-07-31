@@ -17,7 +17,7 @@ data class Prompt(
   @Column()
   val promptKey: String,
   val description: String,
-  val isDeleted: Boolean,
+  var isDeleted: Boolean,
   val createdBy: UUID,
   val createdDate: LocalDateTime,
   @Transient

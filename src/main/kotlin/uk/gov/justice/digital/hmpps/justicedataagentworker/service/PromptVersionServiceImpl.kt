@@ -11,8 +11,7 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.model.Prompt
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.PromptVersion
 import uk.gov.justice.digital.hmpps.justicedataagentworker.repository.PromptRepository
 import uk.gov.justice.digital.hmpps.justicedataagentworker.repository.PromptVersionRepository
-import java.time.LocalDateTime
-import java.time.ZoneOffset
+
 import java.util.UUID
 
 @Service
@@ -26,33 +25,36 @@ class PromptVersionServiceImpl(
   }
 
   override suspend fun savePromptVersion(promptVersionRequest: PromptVersionRequest): PromptVersionResponse {
-    val prompt = promptRepository.findById(promptVersionRequest.promptId)
+    TODO("Not yet implemented")
+    /*val prompt = promptRepository.findById(promptVersionRequest.promptId)
     if (prompt == null) {
       throw NotFoundException("Prompt with ${promptVersionRequest.promptId} not found")
     }
     var promptVersion = convertPromptVersionRequestToEntity(promptVersionRequest)
     logger.info("Saving prompt version for client: ${promptVersion.createdBy}, version ${promptVersion.version}")
     promptVersion = promptVersionRepository.save(promptVersion)
-    return convertEntityToPromptVersionResponse(promptVersion)
+    return convertEntityToPromptVersionResponse(promptVersion)*/
   }
 
   override suspend fun getPromptVersionById(id: UUID): PromptVersionResponse {
-    var promptVersion: PromptVersion? = null
+    TODO("Not yet implemented")
+    /*var promptVersion: PromptVersion? = null
     promptVersionRepository.findById(id)?.let { entity -> promptVersion = entity }
     if (promptVersion == null) {
       throw NotFoundException("Prompt Version with id $id not found")
     }
-    return convertEntityToPromptVersionResponse(promptVersion)
+    return convertEntityToPromptVersionResponse(promptVersion)*/
   }
 
   override suspend fun getPromptVersionByKeyAndVersion(key: String, version: Int): PromptVersionResponse {
-    promptRepository.save(buildPrompt(mutableSetOf()))
+    TODO("Not yet implemented")
+    /*promptRepository.save(buildPrompt(mutableSetOf()))
     val prompt = promptRepository.findPromptByPromptKey(key)
     var promptVersion = promptVersionRepository.findPromptVersionByPromptIdAndVersion(prompt?.id!!, version)
     if (promptVersion == null) {
       throw NotFoundException("Prompt Version with id $key and $version not found")
     }
-    return convertEntityToPromptVersionResponse(promptVersion)
+    return convertEntityToPromptVersionResponse(promptVersion)*/
   }
 
   override suspend fun updatePromptVersionById(
@@ -66,7 +68,7 @@ class PromptVersionServiceImpl(
     TODO("Not yet implemented")
   }
 
-  private fun convertPromptVersionRequestToEntity(promptVersionRequest: PromptVersionRequest): PromptVersion {
+  /*private fun convertPromptVersionRequestToEntity(promptVersionRequest: PromptVersionRequest): PromptVersion {
     val responseFormat =
       if (promptVersionRequest.responseContract != null) Json.of(promptVersionRequest.responseContract) else null
     return PromptVersion(
@@ -80,9 +82,9 @@ class PromptVersionServiceImpl(
       promptVersionRequest.createdBy,
       LocalDateTime.now(ZoneOffset.UTC),
     )
-  }
+  }*/
 
-  private fun convertEntityToPromptVersionResponse(promptVersion: PromptVersion): PromptVersionResponse = PromptVersionResponse(
+  /*private fun convertEntityToPromptVersionResponse(promptVersion: PromptVersion): PromptVersionResponse = PromptVersionResponse(
     promptVersion.id!!,
     promptVersion.version,
     promptVersion.promptId,
@@ -92,9 +94,9 @@ class PromptVersionServiceImpl(
     promptVersion.responseContract?.asString(),
     promptVersion.createdBy,
     promptVersion.createdDate,
-  )
+  )*/
 
-  fun buildPrompt(promptVersion: MutableSet<PromptVersion>): Prompt = Prompt(
+  /*fun buildPrompt(promptVersion: MutableSet<PromptVersion>): Prompt = Prompt(
     Generators.timeBasedEpochGenerator().generate(),
     UUID.randomUUID().toString(),
     // promptVersion,
@@ -102,5 +104,5 @@ class PromptVersionServiceImpl(
     false,
     UUID.randomUUID(),
     LocalDateTime.now(ZoneOffset.UTC),
-  )
+  )*/
 }

@@ -13,7 +13,7 @@ import java.util.UUID
 data class PromptVersion(
   @Id
   @JvmField
-  var id: UUID? = null,
+  var id: UUID,
   val version: Int,
 
   val promptId: UUID,

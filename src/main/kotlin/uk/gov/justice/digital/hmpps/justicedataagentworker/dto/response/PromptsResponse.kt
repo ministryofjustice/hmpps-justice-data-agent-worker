@@ -3,13 +3,12 @@ package uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response
 import java.time.LocalDateTime
 import java.util.UUID
 
-data class PromptVersionResponse(
+data class PromptsResponse(
   var id: UUID,
-  val version: Int,
-  val llmModel: String,
-  val promptTemplate: String,
-  val requestContract: String,
-  val responseContract: String? = null,
+  val promptKey: String,
+  val description: String,
+  val isDeleted: Boolean,
   val createdBy: UUID,
   val createdDate: LocalDateTime,
+  val promptVersions: List<PromptVersionResponse>
 )

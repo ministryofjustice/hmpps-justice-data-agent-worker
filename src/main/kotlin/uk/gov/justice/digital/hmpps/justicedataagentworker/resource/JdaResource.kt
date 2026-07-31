@@ -47,7 +47,7 @@ class JdaResource(private val jdaWorkerService: JdaWorkerService) {
     ],
   )
   @PostMapping("v1/chat/jda/worker", consumes = [APPLICATION_JSON_VALUE], produces = [APPLICATION_JSON_VALUE])
-  @PreAuthorize("hasAnyRole('JUSTICE_DATA_AGENT_REQUESTS')")
+  //@PreAuthorize("hasAnyRole('JUSTICE_DATA_AGENT_REQUESTS')")
   suspend fun analyze(
     @RequestBody jdaRequest: JdaRequest,
   ): ResponseEntity<JdaResponse> {

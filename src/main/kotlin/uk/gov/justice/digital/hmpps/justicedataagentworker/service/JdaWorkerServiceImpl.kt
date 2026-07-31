@@ -27,7 +27,7 @@ import java.util.UUID
 class JdaWorkerServiceImpl(
   private val jsonSchemaValidator: JsonSchemaValidator,
   private val liteLlmService: LiteLlmService,
-  private val promptVersionService: PromptVersionService,
+  private val promptService: PromptService,
   private val requestHistoryService: RequestHistoryService,
 ) : JdaWorkerService {
 
@@ -51,13 +51,13 @@ class JdaWorkerServiceImpl(
   }
 
   override suspend fun handleSynchronousRequest(jdaRequest: JdaRequest): JdaResponse {
-    var promptVersionResponse = promptVersionService.getPromptVersionByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version)
+    var promptVersionResponse = promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version)
     val time = LocalDateTime.now(ZoneOffset.UTC)
     var requestHistory: RequestHistory? = null
     var aiResponse: Any? = null
     var inputJson = jdaRequest.requestData
     inputJson = Json.pretty(inputJson)
-    jsonSchemaValidator.validateJson(promptVersionResponse.requestContract, inputJson)
+    jsonSchemaValidator.validateJson(promptVersionResponse.promptVersion .requestContract, inputJson)
     requestHistory = RequestHistory(
       Generators.timeBasedEpochGenerator().generate(),
       true,
@@ -77,18 +77,18 @@ class JdaWorkerServiceImpl(
       launch {
         aiResponse = liteLlmService.connect(
           convertMessageToPrompt(
-            promptVersionResponse!!.promptTemplate,
+            promptVersionResponse.promptVersion.promptTemplate,
             inputJson,
           ),
-          promptVersionResponse.llmModel,
+          promptVersionResponse.promptVersion.llmModel,
           false,
         )
       }
     }
     try {
       val response = convertAiResponseToApiResponse(aiResponse!!)
-      if (promptVersionResponse.responseContract != null) {
-        jsonSchemaValidator.validateJson(promptVersionResponse.responseContract, response as String)
+      if (promptVersionResponse.promptVersion.responseContract != null) {
+        jsonSchemaValidator.validateJson(promptVersionResponse.promptVersion.responseContract, response as String)
       }
       // requestHistory = requestHistoryService.getRequestHistoryById(requestHistory.id!!)
       requestHistory?.new = false

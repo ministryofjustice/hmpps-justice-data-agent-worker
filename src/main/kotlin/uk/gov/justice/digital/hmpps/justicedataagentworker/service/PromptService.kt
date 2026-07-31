@@ -2,12 +2,19 @@ package uk.gov.justice.digital.hmpps.justicedataagentworker.service
 
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptResponse
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptsResponse
 import java.util.UUID
 
 interface PromptService {
   suspend fun savePrompt(promptRequest: PromptRequest): PromptResponse
 
-  suspend fun getPromptById(id: UUID): PromptResponse
+  suspend fun updatePrompt(key: String, promptRequest: PromptRequest): PromptResponse
 
-  suspend fun deletePromptById(id: UUID)
+  suspend fun getPrompts(): List<PromptsResponse>  // return all prompts
+
+  suspend fun getPromptsByKeyAndVersion(key: String, version: Int): PromptResponse //
+
+  suspend fun getPromptByKey(key: String): PromptResponse  //return prompt with latest version
+
+  suspend fun deletePromptByKey(key: String)
 }
