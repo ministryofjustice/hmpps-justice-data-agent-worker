@@ -104,6 +104,31 @@ class PromptResourceTest : IntegrationTestBase() {
 
   @Test
   fun updatePrompt() {
+    val response = webTestClient.put().uri("/v1/prompts/${promptKey}")
+      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
+      .header("Content-Type", "application/json")
+      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+      .bodyValue(
+        PromptRequest(
+          promptKey,
+          "AI SERVICE",
+          createdBy,
+          PromptVersionRequest(
+            "TEST-MODEL-5",
+            "Get json output of firstname and lastname.",
+            DataGenerator.jsonRequestSchema,
+            DataGenerator.jsonResponseSchema,
+          ),
+        ),
+      )
+      .accept(MediaType.APPLICATION_JSON)
+      .exchange()
+      .expectStatus().isOk
+      .expectHeader().contentType(MediaType.APPLICATION_JSON_VALUE)
+      .expectBody(object : ParameterizedTypeReference<PromptResponse>() {})
+      .consumeWith(System.out::println)
+      .returnResult()
+      .responseBody as PromptResponse
   }
 
   @Test

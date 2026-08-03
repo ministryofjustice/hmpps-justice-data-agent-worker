@@ -14,13 +14,13 @@ class LiteLlmWebClientTest : IntegrationTestBase() {
 
   @BeforeEach
   fun setUp() {
-    liteLlm.start()
-    liteLlm.stubGrantChatCompletion()
+   // liteLlm.start()
+   // liteLlm.stubGrantChatCompletion()
   }
 
   @AfterEach
   fun tearDown() {
-    liteLlm.stop()
+   // liteLlm.stop()
   }
 
   @Test

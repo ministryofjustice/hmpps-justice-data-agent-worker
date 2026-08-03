@@ -60,7 +60,7 @@ class PromptResource(
 
   @DeleteMapping("/prompts/{key}")
   @PreAuthorize("hasAnyRole('JUSTICE_DATA_AGENT_PROMPTS')")
-  suspend fun getPromptById(@PathVariable key: String): ResponseEntity<Void> {
+  suspend fun deletePromptByKey(@PathVariable key: String): ResponseEntity<Void> {
     promptService.deletePromptByKey(key)
     return ResponseEntity.status(HttpStatus.OK).build()
   }

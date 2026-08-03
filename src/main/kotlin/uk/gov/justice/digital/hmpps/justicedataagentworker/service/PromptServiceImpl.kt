@@ -51,19 +51,20 @@ class PromptServiceImpl(
   }
 
   override suspend fun updatePrompt(key: String, promptRequest: PromptRequest): PromptResponse {
-    logger.info("saving prompt created by ${promptRequest.createdBy}")
+    logger.info("Getting prompt from db by key $key")
     val prompt = promptRepository.findPromptByPromptKeyAndIsDeleted(promptRequest.promptKey, false)
     if (prompt == null) {
-      throw NotFoundException("Prompt with key ${promptRequest.promptKey} ado not exist.")
+      throw NotFoundException("Prompt with key ${promptRequest.promptKey} not Found.")
     }
-    var promptEntity = convertPromptRequestToEntity(promptRequest)
-    promptEntity = promptRepository.save(promptEntity)
-    var promptVersion = promptVersionRepository.findFirstByPromptIdOrderByVersionDesc(promptEntity.id)
-    val version = promptVersion?.version?.plus(1)
-    promptVersion = convertPromptVersionRequestToEntity(promptEntity.id, promptEntity.createdBy, version!!, promptRequest.promptVersion)
+    var promptVersion = promptVersionRepository.findFirstByPromptIdOrderByVersionDesc(prompt.id)
+    if (promptVersion == null) {
+      throw NotFoundException("Prompt with key ${promptRequest.promptKey} do not have any prompt version")
+    }
+    val version = promptVersion.version + 1
+    promptVersion = convertPromptVersionRequestToEntity(prompt.id, prompt.createdBy, version, promptRequest.promptVersion)
     val promptVersionEntity = promptVersionRepository.save(promptVersion)
-    logger.info("returning prompt created by ${promptRequest.createdBy}")
-    return convertPromptToPromptResponse(promptEntity, promptVersionEntity)
+    logger.info("returning updated prompt for key ${promptRequest.promptKey}")
+    return convertPromptToPromptResponse(prompt, promptVersionEntity)
   }
 
   override suspend fun getPrompts(): List<PromptsResponse> {

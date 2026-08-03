@@ -16,9 +16,10 @@ import org.springframework.test.web.reactive.server.WebTestClient
 import uk.gov.justice.digital.hmpps.justicedataagentworker.config.PostgresContainer
 import uk.gov.justice.digital.hmpps.justicedataagentworker.integration.wiremock.HmppsAuthApiExtension
 import uk.gov.justice.digital.hmpps.justicedataagentworker.integration.wiremock.HmppsAuthApiExtension.Companion.hmppsAuth
+import uk.gov.justice.digital.hmpps.justicedataagentworker.integration.wiremock.LiteLlmApiExtension
 import uk.gov.justice.hmpps.test.kotlin.auth.JwtAuthorisationHelper
 
-@ExtendWith(HmppsAuthApiExtension::class)
+@ExtendWith(HmppsAuthApiExtension::class, LiteLlmApiExtension::class)
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @ActiveProfiles("test")
 @AutoConfigureWebTestClient
