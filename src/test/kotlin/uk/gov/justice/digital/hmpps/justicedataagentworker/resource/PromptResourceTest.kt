@@ -1,5 +1,7 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.resource
 
+import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
@@ -34,7 +36,10 @@ class PromptResourceTest : IntegrationTestBase() {
       .mutate()
       .responseTimeout(Duration.ofMillis(30000))
       .build()
-
+    runBlocking {
+      promptVersionRepository.deleteAll()
+      promptRepository.deleteAll()
+    }
     webTestClient.post().uri("/v1/prompts")
       .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
       .header("Content-Type", "application/json")
@@ -73,13 +78,14 @@ class PromptResourceTest : IntegrationTestBase() {
   }*/
   @Test
   fun `create prompt`() {
+    val key = UUID.randomUUID().toString()
     val response = webTestClient.post().uri("/v1/prompts")
       .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
       .header("Content-Type", "application/json")
       .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
       .bodyValue(
         PromptRequest(
-          UUID.randomUUID().toString(),
+          key,
           "AI SERVICE",
           createdBy,
           PromptVersionRequest(
@@ -100,11 +106,16 @@ class PromptResourceTest : IntegrationTestBase() {
       .responseBody as PromptResponse
 
     assertNotNull(response)
+    assertEquals(key, response.promptKey)
+    assertEquals(1, response.promptVersion.version)
+    assertEquals(createdBy, response.createdBy)
+    assertEquals(DataGenerator.jsonRequestSchema, response.promptVersion.requestContract)
+    assertEquals(DataGenerator.jsonResponseSchema, response.promptVersion.responseContract)
   }
 
   @Test
   fun updatePrompt() {
-    val response = webTestClient.put().uri("/v1/prompts/${promptKey}")
+    val response = webTestClient.put().uri("/v1/prompts/$promptKey")
       .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
       .header("Content-Type", "application/json")
       .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
@@ -129,36 +140,13 @@ class PromptResourceTest : IntegrationTestBase() {
       .consumeWith(System.out::println)
       .returnResult()
       .responseBody as PromptResponse
+
+    assertNotNull(response)
+    assertEquals(2, response.promptVersion.version)
   }
 
   @Test
   fun `get prompts`() {
-    /*val response = webTestClient.post().uri("/v1/prompts")
-      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
-      .header("Content-Type", "application/json")
-      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
-      .bodyValue(
-        PromptRequest(
-          promptKey,
-          "AI SERVICE",
-          createdBy,
-          PromptVersionRequest(
-            "TEST-MODEL-5",
-            "Get json output of firstname and lastname.",
-            DataGenerator.jsonRequestSchema,
-            DataGenerator.jsonResponseSchema
-          )
-        )
-      )
-      .accept(MediaType.APPLICATION_JSON)
-      .exchange()
-      .expectStatus().isCreated
-      .expectHeader().contentType(MediaType.APPLICATION_JSON_VALUE)
-      .expectBody(object : ParameterizedTypeReference<PromptResponse>() {})
-      .consumeWith(System.out::println)
-      .returnResult()
-      .responseBody as PromptResponse*/
-
     val res = webTestClient.get().uri("/v1/prompts")
       .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
       .header("Content-Type", "application/json")
@@ -173,11 +161,12 @@ class PromptResourceTest : IntegrationTestBase() {
       .responseBody as List<PromptsResponse>
     assertNotNull(res)
     assertTrue { res.isNotEmpty() }
+    assertEquals(1, res.size)
   }
 
   @Test
   fun `get Prompt by key`() {
-    val res = webTestClient.get().uri("/v1/prompts/$promptKey")
+    val response = webTestClient.get().uri("/v1/prompts/$promptKey")
       .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
       .header("Content-Type", "application/json")
       .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
@@ -189,12 +178,15 @@ class PromptResourceTest : IntegrationTestBase() {
       .consumeWith(System.out::println)
       .returnResult()
       .responseBody as PromptResponse
-    assertNotNull(res)
+    assertNotNull(response)
+    assertEquals(promptKey, response.promptKey)
+    assertEquals(1, response.promptVersion.version)
+    assertEquals(createdBy, response.createdBy)
   }
 
   @Test
   fun `get prompt by random key`() {
-    val res = webTestClient.get().uri("/v1/prompts/${UUID.randomUUID()}")
+    val response = webTestClient.get().uri("/v1/prompts/${UUID.randomUUID()}")
       .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
       .header("Content-Type", "application/json")
       .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
@@ -210,7 +202,7 @@ class PromptResourceTest : IntegrationTestBase() {
 
   @Test
   fun `get prompt by key And version`() {
-    val res = webTestClient.get().uri("/v1/prompts/$promptKey/versions/1")
+    val response = webTestClient.get().uri("/v1/prompts/$promptKey/versions/1")
       .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
       .header("Content-Type", "application/json")
       .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
@@ -222,7 +214,10 @@ class PromptResourceTest : IntegrationTestBase() {
       .consumeWith(System.out::println)
       .returnResult()
       .responseBody as PromptResponse
-    assertNotNull(res)
+    assertNotNull(response)
+    assertEquals(promptKey, response.promptKey)
+    assertEquals(1, response.promptVersion.version)
+    assertEquals(createdBy, response.createdBy)
   }
 
   @Test

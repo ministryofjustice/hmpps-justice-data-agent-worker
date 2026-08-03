@@ -14,7 +14,7 @@ class DataGenerator {
 
     val jsonRequestSchema = """
       {
-        "${'$'}schema": "http://json-schema.org/draft-07/schema#",
+        "'$'schema": "http://json-schema.org/draft-07/schema#",
         "title": "case-note-analysis",
         "type": "array",
         "items": {
@@ -35,11 +35,11 @@ class DataGenerator {
           "additionalProperties": false
         }
       }
-    """.trimIndent()
+    """.replace("\n", "").replace("  ", " ").trimIndent()
 
     val jsonResponseSchema = """
       {
-        "${'$'}schema": "https://json-schema.org/draft/2020-12/schema",
+        "'$'schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "BehaviourRiskAssessments",
         "type": "array",
         "items": {
@@ -89,7 +89,7 @@ class DataGenerator {
           "additionalProperties": false
         }
       }
-    """.trimIndent()
+    """.replace("\n", "").replace("  ", " ").trimIndent()
 
     fun buildPrompt(promptVersion: MutableSet<PromptVersion>): Prompt = Prompt(
       Generators.timeBasedEpochGenerator().generate(),

@@ -1,23 +1,16 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.resource
 
-import org.junit.jupiter.api.Assertions.*
 import org.junit.jupiter.api.BeforeEach
-import org.junit.jupiter.api.Test
-import org.springframework.http.HttpHeaders
-import org.springframework.http.MediaType
-import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaRequest
-import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Prompt
 import uk.gov.justice.digital.hmpps.justicedataagentworker.integration.IntegrationTestBase
 import java.time.Duration
 import java.util.UUID
 
 class JdaResourceTest : IntegrationTestBase() {
 
- private lateinit var promptKey: String
-  @BeforeEach
-  internal fun setUp(
+  private lateinit var promptKey: String
 
-  ) {
+  @BeforeEach
+  internal fun setUp() {
     promptKey = UUID.randomUUID().toString()
     webTestClient = webTestClient
       .mutate()
@@ -42,5 +35,4 @@ class JdaResourceTest : IntegrationTestBase() {
         )
       )
   }*/
-
 }
