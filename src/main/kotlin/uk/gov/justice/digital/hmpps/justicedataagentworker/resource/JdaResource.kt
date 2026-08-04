@@ -5,28 +5,26 @@ import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import io.swagger.v3.oas.annotations.security.SecurityRequirement
-import org.springframework.ai.chat.messages.SystemMessage
-import org.springframework.ai.chat.messages.UserMessage
-import org.springframework.ai.chat.prompt.Prompt
+import io.swagger.v3.oas.annotations.tags.Tag
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.http.ResponseEntity
+import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
-import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
-import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaRequest
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.JdaWorkerService
-import uk.gov.justice.digital.hmpps.justicedataagentworker.service.integration.ChatCompletionRequest
-import uk.gov.justice.digital.hmpps.justicedataagentworker.service.integration.Message
 import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
 
 @RestController
+@RequestMapping("/v1")
 class JdaResource(private val jdaWorkerService: JdaWorkerService) {
 
   // This endpoint is for test purpose only for developer
-
+  @Tag(name = "Jda requests")
   @Operation(
     summary = "Synchronous request to jda worker.",
     description = "This api endpoint is for sending synchronous request  to jda worker.  Requires role ROLE_JUSTICE_DATA_AGENT_REQUESTS",
@@ -45,8 +43,8 @@ class JdaResource(private val jdaWorkerService: JdaWorkerService) {
       ),
     ],
   )
-  @PostMapping("v1/chat/jda/worker", consumes = [APPLICATION_JSON_VALUE], produces = [APPLICATION_JSON_VALUE])
-  // @PreAuthorize("hasAnyRole('JUSTICE_DATA_AGENT_REQUESTS')")
+  @PostMapping("submitrequest", consumes = [APPLICATION_JSON_VALUE], produces = [APPLICATION_JSON_VALUE])
+  @PreAuthorize("hasAnyRole('JUSTICE_DATA_AGENT_REQUESTS')")
   suspend fun analyze(
     @RequestBody jdaRequest: JdaRequest,
   ): ResponseEntity<JdaResponse> {
@@ -54,7 +52,7 @@ class JdaResource(private val jdaWorkerService: JdaWorkerService) {
     return ResponseEntity.status(HttpStatus.OK).body(jdaResponse)
   }
 
-  @PostMapping("v1/chat/completion", consumes = [APPLICATION_JSON_VALUE], produces = [APPLICATION_JSON_VALUE])
+  /*@PostMapping("v1/chat/completion", consumes = [APPLICATION_JSON_VALUE], produces = [APPLICATION_JSON_VALUE])
   suspend fun createSummary(
     @RequestBody contents: List<uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.Content>,
     @RequestParam(required = true) verifyOutputSchema: Boolean,
@@ -139,5 +137,5 @@ class JdaResource(private val jdaWorkerService: JdaWorkerService) {
       messages.add(Message(x.role, x.content))
     }
     return ChatCompletionRequest(model, messages)
-  }
+  }*/
 }

@@ -12,7 +12,7 @@ import java.util.UUID
 data class RequestHistory(
   @Id
   @JvmField
-  var id: UUID? = null,
+  var id: UUID,
   val synchronousRequest: Boolean,
   val correlationId: UUID,
   val promptVersionId: UUID,

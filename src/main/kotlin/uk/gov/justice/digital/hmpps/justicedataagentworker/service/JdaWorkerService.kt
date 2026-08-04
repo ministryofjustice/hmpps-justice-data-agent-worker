@@ -1,7 +1,7 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.service
 
 import org.springframework.ai.chat.prompt.Prompt
-import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaRequest
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaResponse
 
 interface JdaWorkerService {

@@ -12,16 +12,18 @@ import org.springframework.ai.chat.messages.UserMessage
 import org.springframework.ai.chat.prompt.Prompt
 import org.springframework.stereotype.Service
 import tools.jackson.databind.ObjectMapper
-import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaRequest
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaResponse
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.MetaData
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.RequestType
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.LiteLlmException
+import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.ValidationException
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.RequestHistory
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.Status
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.integration.LiteLlmService
 import uk.gov.justice.digital.hmpps.justicedataagentworker.validator.JsonSchemaValidator
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import java.util.UUID
 
 @Service
 class JdaWorkerServiceImpl(
@@ -29,6 +31,7 @@ class JdaWorkerServiceImpl(
   private val liteLlmService: LiteLlmService,
   private val promptService: PromptService,
   private val requestHistoryService: RequestHistoryService,
+  private val mapper: ObjectMapper,
 ) : JdaWorkerService {
 
   companion object {
@@ -42,7 +45,7 @@ class JdaWorkerServiceImpl(
     useWebClient: Boolean,
   ): Any {
     var response = liteLlmService.connect(prompt, model, useWebClient)
-    response = convertAiResponseToApiResponse(response)
+    response = convertLlmResponseToApiResponse(response, null)
     if (!jsonSchema.isNullOrBlank()) {
       logger.info("Validating data with json schema: {}")
       jsonSchemaValidator.validateJson(jsonSchema!!, response as String)
@@ -51,70 +54,85 @@ class JdaWorkerServiceImpl(
   }
 
   override suspend fun handleSynchronousRequest(jdaRequest: JdaRequest): JdaResponse {
-    var promptVersionResponse = promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version)
+    val promptVersionResponse = promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version)
     val time = LocalDateTime.now(ZoneOffset.UTC)
-    var requestHistory: RequestHistory? = null
-    var aiResponse: Any? = null
-    var inputJson = jdaRequest.requestData
-    inputJson = Json.pretty(inputJson)
-    jsonSchemaValidator.validateJson(promptVersionResponse.promptVersion.requestContract, inputJson)
-    requestHistory = RequestHistory(
+    var llmResponse: Any? = null
+    val requestHistory = RequestHistory(
       Generators.timeBasedEpochGenerator().generate(),
       true,
       jdaRequest.correlationId,
-      promptVersionResponse.id!!,
-      time,
+      promptVersionResponse.id,
+      null,
       time,
       null,
-      Status.QUEUED,
+      Status.PROCESSING,
       null,
       null,
     )
+    var inputJson = jdaRequest.requestData
+    inputJson = Json.pretty(inputJson)
+    validateJsonDataWithJsonSchema(promptVersionResponse.promptVersion.requestContract, inputJson, requestHistory)
     coroutineScope {
       launch {
         requestHistoryService.saveRequestHistory(requestHistory)
       }
       launch {
-        aiResponse = liteLlmService.connect(
+        llmResponse = sendRequestToLlm(
           convertMessageToPrompt(
             promptVersionResponse.promptVersion.promptTemplate,
             inputJson,
           ),
           promptVersionResponse.promptVersion.llmModel,
           false,
+          requestHistory,
         )
       }
     }
-    try {
-      val response = convertAiResponseToApiResponse(aiResponse!!)
-      if (promptVersionResponse.promptVersion.responseContract != null) {
-        jsonSchemaValidator.validateJson(promptVersionResponse.promptVersion.responseContract, response as String)
-      }
-      // requestHistory = requestHistoryService.getRequestHistoryById(requestHistory.id!!)
-      requestHistory?.new = false
-      requestHistory?.status = Status.SUCCEEDED
-      requestHistory?.completedAt = LocalDateTime.now(ZoneOffset.UTC)
-      requestHistoryService.saveRequestHistory(requestHistory!!)
-      return JdaResponse(
-        UUID.randomUUID(),
-        jdaRequest.correlationId,
-        jdaRequest.prompt,
-        ObjectMapper().readTree(response as String),
-      )
-    } catch (e: Exception) {
-      logger.error("Error processing connecting to lite llm: {}", e)
-      // requestHistory = requestHistoryService.getRequestHistoryById(requestHistory.id!!)
-      requestHistory?.new = false
-      requestHistory?.status = Status.REJECTED
-      requestHistory?.errorAt = LocalDateTime.now(ZoneOffset.UTC)
-      requestHistory?.errorMessage = e.message
-      requestHistoryService.saveRequestHistory(requestHistory!!)
-      throw LiteLlmException("Exception getting llm response: e")
+    val response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory)
+    if (promptVersionResponse.promptVersion.responseContract != null) {
+      validateJsonDataWithJsonSchema(promptVersionResponse.promptVersion.responseContract, response as String, requestHistory)
     }
+    requestHistory.new = false
+    requestHistory.status = Status.SUCCEEDED
+    requestHistory.completedAt = LocalDateTime.now(ZoneOffset.UTC)
+    requestHistoryService.saveRequestHistory(requestHistory)
+    return JdaResponse(
+      requestHistory.id,
+      jdaRequest.correlationId,
+      jdaRequest.prompt,
+      mapper.readTree(response as String),
+      MetaData(
+        RequestType.SYNC,
+        requestHistory.receivedAt,
+        requestHistory.queuedAt,
+        requestHistory.receivedAt,
+        requestHistory.receivedAt,
+        requestHistory.completedAt,
+      ),
+    )
   }
 
   override suspend fun handleAsynchronousRequest(jdaRequest: JdaRequest): JdaResponse {
     TODO("Not yet implemented")
+  }
+
+  private suspend fun sendRequestToLlm(prompt: Prompt, model: String, useWebClient: Boolean, requestHistory: RequestHistory): Any {
+    try {
+      val llmResponse = liteLlmService.connect(
+        prompt,
+        model,
+        useWebClient,
+      )
+      return llmResponse
+    } catch (e: Exception) {
+      logger.error("Error occurred while connecting to llm request: ${e.message}")
+      requestHistory.new = false
+      requestHistory.status = Status.FAILED
+      requestHistory.errorAt = LocalDateTime.now(ZoneOffset.UTC)
+      requestHistory.errorMessage = e.message
+      requestHistoryService.saveRequestHistory(requestHistory)
+      throw LiteLlmException("Error occurred connecting to LLM: ${e.message}")
+    }
   }
 
   private fun convertMessageToPrompt(systemMessage: String, userMessage: String): Prompt {
@@ -124,23 +142,47 @@ class JdaWorkerServiceImpl(
     return Prompt(list)
   }
 
-  private fun convertAiResponseToApiResponse(aiResponse: Any): Any {
-    var response = aiResponse
-    if (response is ChatCompletion) {
-      val message = response.choices().get(0) as Map<String, Any>
-      val content = message["message"] as Map<String, Any>
-      response = content["content"] as String
-      response = response.replace("```json", "")
-      response = response.replace("```", "")
-      response = response.replace("\n", "")
+  private suspend fun validateJsonDataWithJsonSchema(jsonSchema: String, data: String, requestHistory: RequestHistory) {
+    try {
+      jsonSchemaValidator.validateJson(jsonSchema, data)
+    } catch (e: Exception) {
+      logger.error("Error occurred while schema validation: ${e.message}")
+      requestHistory.new = false
+      requestHistory.status = Status.REJECTED
+      requestHistory.errorAt = LocalDateTime.now(ZoneOffset.UTC)
+      requestHistory.errorMessage = e.message
+      requestHistoryService.saveRequestHistory(requestHistory)
+      throw ValidationException("Error occurred validating with json schema: ${e.message}")
     }
+  }
 
-    if (response is ChatClientResponse) {
-      response = response.chatResponse!!.result!!.output.text!!
-      response = response.replace("```json", "")
-      response = response.replace("```", "")
-      response = response.replace("\n", "")
+  private suspend fun convertLlmResponseToApiResponse(llmResponse: Any, requestHistory: RequestHistory?): Any {
+    try {
+      var response = llmResponse
+      if (response is ChatCompletion) {
+        val message = response.choices().get(0) as Map<String, Any>
+        val content = message["message"] as Map<String, Any>
+        response = content["content"] as String
+        response = response.replace("```json", "")
+        response = response.replace("```", "")
+        response = response.replace("\n", "")
+      }
+
+      if (response is ChatClientResponse) {
+        response = response.chatResponse!!.result!!.output.text!!
+        response = response.replace("```json", "")
+        response = response.replace("```", "")
+        response = response.replace("\n", "")
+      }
+      return response
+    } catch (e: Exception) {
+      logger.error("Error occurred while processing llm response: ${e.message}")
+      requestHistory?.new = false
+      requestHistory?.status = Status.FAILED
+      requestHistory?.errorAt = LocalDateTime.now(ZoneOffset.UTC)
+      requestHistory?.errorMessage = e.message
+      if (requestHistory != null) requestHistoryService.saveRequestHistory(requestHistory)
+      throw LiteLlmException("Error occurred while processing llm response: ${e.message}")
     }
-    return response
   }
 }

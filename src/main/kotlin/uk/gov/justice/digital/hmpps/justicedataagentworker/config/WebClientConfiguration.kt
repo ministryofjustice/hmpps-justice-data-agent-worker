@@ -4,6 +4,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.reactive.function.client.WebClient
+import tools.jackson.databind.ObjectMapper
 import uk.gov.justice.hmpps.kotlin.auth.healthWebClient
 import java.time.Duration
 
@@ -21,4 +22,6 @@ class WebClientConfiguration(
 
   @Bean
   fun hmppsLiteLLMRestWebClient(builder: WebClient.Builder): WebClient = builder.baseUrl(llmBaseUrl).defaultHeader("Authorization", "Bearer $apiKey").build()
+
+  @Bean fun mapper(): ObjectMapper = ObjectMapper()
 }
