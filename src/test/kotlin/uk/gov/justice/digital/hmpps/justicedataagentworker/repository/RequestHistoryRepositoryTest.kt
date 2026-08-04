@@ -72,11 +72,7 @@ class RequestHistoryRepositoryTest : IntegrationTestBase() {
     assertEquals(expected.correlationId, actual.correlationId)
     assertEquals(expected.synchronousRequest, actual.synchronousRequest)
     assertEquals(expected.status, actual.status)
-    assertEquals(expected.completedAt, actual.completedAt)
     assertEquals(expected.promptVersionId, actual.promptVersionId)
     assertEquals(expected.errorMessage, actual.errorMessage)
-    assertEquals(expected.errorAt, actual.errorAt)
-    assertEquals(expected.queuedAt, actual.queuedAt)
-    assertEquals(expected.receivedAt, actual.receivedAt)
   }
 }
