@@ -22,6 +22,7 @@ class LiteLlmApiExtension :
 
   override fun beforeAll(context: ExtensionContext) {
     liteLlm.start()
+    liteLlm.stubGrantChatCompletion()
   }
 
   override fun beforeEach(context: ExtensionContext) {

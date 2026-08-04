@@ -18,7 +18,7 @@ class LiteLlmServiceImpl(
   companion object {
     private val logger = LoggerFactory.getLogger(this::class.java)
   }
-  override fun connect(
+  override suspend fun connect(
     prompt: Prompt,
     model: String,
     useWebClient: Boolean,

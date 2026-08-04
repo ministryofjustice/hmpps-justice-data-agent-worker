@@ -2,19 +2,13 @@ package uk.gov.justice.digital.hmpps.justicedataagentworker.validator
 
 import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration
-import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.test.context.ActiveProfiles
-import org.springframework.test.context.junit.jupiter.SpringExtension
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.ValidationException
+import uk.gov.justice.digital.hmpps.justicedataagentworker.integration.IntegrationTestBase
 
-@SpringBootTest(classes = [JsonSchemaValidator::class])
-@EnableAutoConfiguration
-@ExtendWith(SpringExtension::class)
 @ActiveProfiles("test")
-class JsonSchemaValidatorTest {
+class JsonSchemaValidatorTest : IntegrationTestBase() {
 
   @Autowired private lateinit var validator: JsonSchemaValidator
 

@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.utility
 
 import com.fasterxml.uuid.Generators
+import io.r2dbc.postgresql.codec.Json
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.Prompt
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.PromptVersion
 import java.time.LocalDateTime
@@ -13,7 +14,7 @@ class DataGenerator {
 
     val jsonRequestSchema = """
       {
-        "${'$'}schema": "http://json-schema.org/draft-07/schema#",
+        "'$'schema": "http://json-schema.org/draft-07/schema#",
         "title": "case-note-analysis",
         "type": "array",
         "items": {
@@ -34,11 +35,11 @@ class DataGenerator {
           "additionalProperties": false
         }
       }
-    """.trimIndent()
+    """.replace("\n", "").replace("  ", " ").trimIndent()
 
     val jsonResponseSchema = """
       {
-        "${'$'}schema": "https://json-schema.org/draft/2020-12/schema",
+        "'$'schema": "https://json-schema.org/draft/2020-12/schema",
         "title": "BehaviourRiskAssessments",
         "type": "array",
         "items": {
@@ -88,26 +89,36 @@ class DataGenerator {
           "additionalProperties": false
         }
       }
-    """.trimIndent()
+    """.replace("\n", "").replace("  ", " ").trimIndent()
 
     fun buildPrompt(promptVersion: MutableSet<PromptVersion>): Prompt = Prompt(
       Generators.timeBasedEpochGenerator().generate(),
       UUID.randomUUID().toString(),
-      promptVersion,
+      // promptVersion,
       "Inline instruction  FOR LLM",
       false,
       UUID.randomUUID(),
       LocalDateTime.now(ZoneOffset.UTC),
     )
 
-    fun buildPromptVersion(prompt: Prompt, requestJsonSchema: String, responseJsonSchema: String): PromptVersion = PromptVersion(
+    fun buildPrompt(key: String, createdBy: UUID): Prompt = Prompt(
       Generators.timeBasedEpochGenerator().generate(),
-      1,
-      prompt,
-      "Test-Model-x1",
+      key,
+      // promptVersion,
       "Inline instruction  FOR LLM",
       false,
-      responseJsonSchema,
+      createdBy,
+      LocalDateTime.now(ZoneOffset.UTC),
+    )
+
+    fun buildPromptVersion(promptId: UUID, requestJsonSchema: String, responseJsonSchema: String): PromptVersion = PromptVersion(
+      Generators.timeBasedEpochGenerator().generate(),
+      1,
+      promptId,
+      "Test-Model-x1",
+      "Inline instruction  FOR LLM",
+      Json.of(requestJsonSchema),
+      Json.of(responseJsonSchema),
       UUID.randomUUID(),
       LocalDateTime.now(ZoneOffset.UTC),
     )

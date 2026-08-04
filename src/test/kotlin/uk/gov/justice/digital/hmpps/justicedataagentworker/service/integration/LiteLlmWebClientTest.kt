@@ -6,7 +6,6 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import uk.gov.justice.digital.hmpps.justicedataagentworker.integration.IntegrationTestBase
-import uk.gov.justice.digital.hmpps.justicedataagentworker.integration.wiremock.LiteLlmApiExtension.Companion.liteLlm
 
 class LiteLlmWebClientTest : IntegrationTestBase() {
   @Autowired
@@ -14,13 +13,13 @@ class LiteLlmWebClientTest : IntegrationTestBase() {
 
   @BeforeEach
   fun setUp() {
-    liteLlm.start()
-    liteLlm.stubGrantChatCompletion()
+    // liteLlm.start()
+    // liteLlm.stubGrantChatCompletion()
   }
 
   @AfterEach
   fun tearDown() {
-    liteLlm.stop()
+    // liteLlm.stop()
   }
 
   @Test
