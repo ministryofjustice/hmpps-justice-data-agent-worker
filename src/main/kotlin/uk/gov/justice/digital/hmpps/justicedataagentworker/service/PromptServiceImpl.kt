@@ -6,6 +6,7 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.stream.consumeAsFlow
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
+import tools.jackson.databind.ObjectMapper
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptVersionRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptResponse
@@ -25,6 +26,7 @@ import java.util.UUID
 class PromptServiceImpl(
   private val promptRepository: PromptRepository,
   private val promptVersionRepository: PromptVersionRepository,
+  private val mapper: ObjectMapper,
 ) : PromptService {
 
   companion object {
@@ -137,8 +139,8 @@ class PromptServiceImpl(
     promptId,
     promptVersionRequest.llmModel,
     promptVersionRequest.promptTemplate,
-    Json.of(promptVersionRequest.requestContract),
-    promptVersionRequest.responseContract?.let { Json.of(it) },
+    Json.of(mapper.writeValueAsString(promptVersionRequest.requestContract)),
+    promptVersionRequest.responseContract?.let { Json.of(mapper.writeValueAsString(it)) },
     createdBy,
     LocalDateTime.now(ZoneOffset.UTC),
   )
@@ -155,8 +157,8 @@ class PromptServiceImpl(
       promptVersion.version,
       promptVersion.llmModel,
       promptVersion.promptTemplate,
-      promptVersion.requestContract.asString(),
-      promptVersion.responseContract?.let { it.asString() },
+      mapper.readTree(promptVersion.requestContract.asString()),
+      promptVersion.responseContract?.let { mapper.readTree(it.asString()) },
       promptVersion.createdBy,
       promptVersion.createdDate,
     ),
@@ -171,8 +173,8 @@ class PromptServiceImpl(
           promptVersion.version,
           promptVersion.llmModel,
           promptVersion.promptTemplate,
-          promptVersion.requestContract.asString(),
-          promptVersion.responseContract?.let { it.asString() },
+          mapper.readTree(promptVersion.requestContract.asString()),
+          promptVersion.responseContract?.let { mapper.readTree(it.asString()) },
           promptVersion.createdBy,
           promptVersion.createdDate,
         ),

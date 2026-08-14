@@ -71,7 +71,7 @@ class JdaWorkerServiceImpl(
     )
     var inputJson = jdaRequest.requestData
     inputJson = Json.pretty(inputJson)
-    validateJsonDataWithJsonSchema(promptVersionResponse.promptVersion.requestContract, inputJson, requestHistory)
+    validateJsonDataWithJsonSchema(mapper.writeValueAsString(promptVersionResponse.promptVersion.requestContract), inputJson, requestHistory)
     coroutineScope {
       launch {
         requestHistoryService.saveRequestHistory(requestHistory)
@@ -90,7 +90,7 @@ class JdaWorkerServiceImpl(
     }
     val response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory)
     if (promptVersionResponse.promptVersion.responseContract != null) {
-      validateJsonDataWithJsonSchema(promptVersionResponse.promptVersion.responseContract, response as String, requestHistory)
+      validateJsonDataWithJsonSchema(mapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response as String, requestHistory)
     }
     requestHistory.new = false
     requestHistory.status = Status.SUCCEEDED
