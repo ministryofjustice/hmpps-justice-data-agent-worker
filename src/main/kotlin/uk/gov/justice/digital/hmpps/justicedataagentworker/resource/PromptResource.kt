@@ -84,7 +84,7 @@ class PromptResource(
 
   @Tag(name = "prompts")
   @Operation(
-    summary = "Get prompt by key",
+    summary = "Get all prompts",
     description = "This api endpoint is for get all prompts with versions.  Requires role ROLE_JUSTICE_DATA_AGENT_PROMPTS",
     security = [SecurityRequirement(name = "JUSTICE_DATA_AGENT_PROMPTS")],
     responses = [

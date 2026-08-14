@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
+import tools.jackson.databind.ObjectMapper
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptVersionRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptResponse
@@ -24,9 +25,14 @@ import java.util.UUID
 import kotlin.random.Random
 
 class PromptResourceTest : IntegrationTestBase() {
-  @Autowired private lateinit var promptRepository: PromptRepository
+  @Autowired
+  private lateinit var promptRepository: PromptRepository
 
-  @Autowired private lateinit var promptVersionRepository: PromptVersionRepository
+  @Autowired
+  private lateinit var promptVersionRepository: PromptVersionRepository
+
+  @Autowired
+  private lateinit var mapper: ObjectMapper
   private val promptKey = UUID.randomUUID().toString()
   private val createdBy = UUID.randomUUID()
 
@@ -52,8 +58,8 @@ class PromptResourceTest : IntegrationTestBase() {
           PromptVersionRequest(
             "TEST-MODEL-5",
             "Get json output of firstname and lastname.",
-            DataGenerator.jsonRequestSchema,
-            DataGenerator.jsonResponseSchema,
+            mapper.readTree(DataGenerator.jsonRequestSchema),
+            mapper.readTree(DataGenerator.jsonResponseSchema),
           ),
         ),
       )
@@ -91,8 +97,8 @@ class PromptResourceTest : IntegrationTestBase() {
           PromptVersionRequest(
             "TEST-MODEL-5",
             "Get json output of firstname and lastname.",
-            DataGenerator.jsonRequestSchema,
-            DataGenerator.jsonResponseSchema,
+            mapper.readTree(DataGenerator.jsonRequestSchema),
+            mapper.readTree(DataGenerator.jsonResponseSchema),
           ),
         ),
       )
@@ -109,8 +115,8 @@ class PromptResourceTest : IntegrationTestBase() {
     assertEquals(key, response.promptKey)
     assertEquals(1, response.promptVersion.version)
     assertEquals(createdBy, response.createdBy)
-    assertEquals(DataGenerator.jsonRequestSchema, response.promptVersion.requestContract)
-    assertEquals(DataGenerator.jsonResponseSchema, response.promptVersion.responseContract)
+    assertEquals(mapper.readTree(DataGenerator.jsonRequestSchema.trimIndent()), response.promptVersion.requestContract)
+    assertEquals(mapper.readTree(DataGenerator.jsonResponseSchema.trimIndent()), response.promptVersion.responseContract)
   }
 
   @Test
@@ -127,8 +133,8 @@ class PromptResourceTest : IntegrationTestBase() {
           PromptVersionRequest(
             "TEST-MODEL-5",
             "Get json output of firstname and lastname.",
-            DataGenerator.jsonRequestSchema,
-            DataGenerator.jsonResponseSchema,
+            mapper.readTree(DataGenerator.jsonRequestSchema),
+            mapper.readTree(DataGenerator.jsonResponseSchema),
           ),
         ),
       )

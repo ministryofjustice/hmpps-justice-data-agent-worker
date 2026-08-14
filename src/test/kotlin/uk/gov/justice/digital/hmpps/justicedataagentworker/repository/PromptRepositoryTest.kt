@@ -23,15 +23,19 @@ class PromptRepositoryTest : IntegrationTestBase() {
   @Autowired
   private lateinit var promptRepository: PromptRepository
 
+  @Autowired
+  private lateinit var promptVersionRepository: PromptVersionRepository
+
   private lateinit var prompt: Prompt
   private lateinit var promptVersion: PromptVersion
 
   @BeforeAll
   fun setUp() {
     runBlocking {
-      promptRepository.deleteAll()
       prompt = DataGenerator.buildPrompt(mutableSetOf())
       promptVersion = DataGenerator.buildPromptVersion(prompt.id!!, jsonRequestSchema, jsonResponseSchema)
+      promptVersionRepository.deleteAll()
+      promptRepository.deleteAll()
     }
   }
 
