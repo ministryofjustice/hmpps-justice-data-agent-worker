@@ -15,6 +15,15 @@ springdoc:
   swagger-ui:
     enabled: true
 spring:
+  #cloud:
+    #aws:
+      #region:
+        #static: eu-west-2
+      #credentials:
+        #access-key: test
+        #secret-key: test
+      #sqs:
+        #endpoint: http://localhost:4566
   ai:
     openai:
       api-key: randomValue
@@ -56,11 +65,24 @@ logging:
       migration: DEBUG
 
 hmpps:
-  #sqs:
-  #queues:
-  #domaineventsqueue:
-  #queueName: ${HMPPS_SQS_QUEUES_DOMAINEVENTSQUEUE_QUEUE_NAME}
-  #dlqName: ${HMPPS_SQS_QUEUES_DOMAINEVENTSQUEUE_DLQ_NAME}
+  sqs:
+    enabled: true
+    provider: localstack
+    localstackUrl: http://localhost:4566
+    region: eu-west-2
+    queues:
+      jdarequestqueus:
+        queuename: sqs_request_queue_name
+        dlqName: sqs_request_dlq_queue_name
+        #subscribeTopicId: jdaevents
+      jdaresponsequeus:
+        queuename: sqs_response_queue_name
+        dlqName: sqs_response_dlq_queue_name
+        #subscribeTopicId: jdaevents
+    #topics:
+      #jdaevents:
+        #arn: arn:aws:sns:XXX-REGION:YYYY:jdaevents-topic
+
   ai-gateway:
     api-key: randomValue
     base-url: http://localhost:8091

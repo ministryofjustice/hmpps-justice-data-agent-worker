@@ -1,8 +1,12 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.integration
 
+import org.awaitility.Awaitility.await
+import org.awaitility.kotlin.untilCallTo
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -13,10 +17,14 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
+import uk.gov.justice.digital.hmpps.justicedataagentworker.config.LocalStackContainer
+import uk.gov.justice.digital.hmpps.justicedataagentworker.config.LocalStackContainer.setLocalStackProperties
 import uk.gov.justice.digital.hmpps.justicedataagentworker.config.PostgresContainer
 import uk.gov.justice.digital.hmpps.justicedataagentworker.integration.wiremock.HmppsAuthApiExtension
 import uk.gov.justice.digital.hmpps.justicedataagentworker.integration.wiremock.HmppsAuthApiExtension.Companion.hmppsAuth
 import uk.gov.justice.digital.hmpps.justicedataagentworker.integration.wiremock.LiteLlmApiExtension
+import uk.gov.justice.hmpps.sqs.HmppsQueue
+import uk.gov.justice.hmpps.sqs.HmppsQueueService
 import uk.gov.justice.hmpps.test.kotlin.auth.JwtAuthorisationHelper
 
 @ExtendWith(HmppsAuthApiExtension::class, LiteLlmApiExtension::class)
@@ -27,16 +35,33 @@ abstract class IntegrationTestBase internal constructor() {
 
   @Autowired private lateinit var flyway: Flyway
 
+  @Autowired
+  protected lateinit var hmppsQueueService: HmppsQueueService
+
+  internal val eventQueue by lazy { hmppsQueueService.findByQueueId("jdaevents") as HmppsQueue }
+  internal val awsSqsClient by lazy { eventQueue.sqsClient }
+  internal val queueUrl by lazy { eventQueue.queueUrl }
+
   companion object {
 
     @JvmStatic
     private val container = PostgresContainer.postgres
+
+    @JvmStatic
+    private val localStackContainer = LocalStackContainer.instance
+
+    @JvmStatic
+    @DynamicPropertySource
+    fun localstackProperties(registry: DynamicPropertyRegistry) {
+      localStackContainer?.also { setLocalStackProperties(it, registry) }
+    }
 
     @BeforeAll
     @JvmStatic
     fun startContainer() {
       // postgresContainer.start()
       // flyway
+      localStackContainer?.start()
     }
 
     @AfterAll
@@ -58,6 +83,17 @@ abstract class IntegrationTestBase internal constructor() {
       }
     }
   }
+
+  /*@BeforeEach
+  fun `Wait for empty queue`() {
+    await untilCallTo { getNumberOfMessagesCurrentlyOnQueue(awsSqsClient, queueUrl) } matches { it == 0 }
+  }
+
+  @AfterEach
+  fun `Clear message store`() {
+    eventStore.store.retainAll(setOf(eventStore.store.first))
+    eventRepository.deleteAll()
+  }*/
 
   @Autowired
   protected lateinit var webTestClient: WebTestClient

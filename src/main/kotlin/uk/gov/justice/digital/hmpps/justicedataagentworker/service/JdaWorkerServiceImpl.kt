@@ -20,6 +20,7 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.LiteLlmExce
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.ValidationException
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.RequestHistory
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.Status
+import uk.gov.justice.digital.hmpps.justicedataagentworker.service.event.JdaMessagePublisher
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.integration.LiteLlmService
 import uk.gov.justice.digital.hmpps.justicedataagentworker.validator.JsonSchemaValidator
 import java.time.LocalDateTime
@@ -32,6 +33,7 @@ class JdaWorkerServiceImpl(
   private val promptService: PromptService,
   private val requestHistoryService: RequestHistoryService,
   private val mapper: ObjectMapper,
+  private val jdaMessagePublisher: JdaMessagePublisher
 ) : JdaWorkerService {
 
   companion object {
@@ -112,8 +114,64 @@ class JdaWorkerServiceImpl(
     )
   }
 
-  override suspend fun handleAsynchronousRequest(jdaRequest: JdaRequest): JdaResponse {
-    TODO("Not yet implemented")
+  override suspend fun handleAsynchronousRequest(jdaRequest: JdaRequest) {
+    val promptVersionResponse = promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version)
+    val time = LocalDateTime.now(ZoneOffset.UTC)
+    var llmResponse: Any? = null
+    val requestHistory = RequestHistory(
+      Generators.timeBasedEpochGenerator().generate(),
+      true,
+      jdaRequest.correlationId,
+      promptVersionResponse.id,
+      null,
+      time,
+      null,
+      Status.PROCESSING,
+      null,
+      null,
+    )
+    var inputJson = jdaRequest.requestData
+    inputJson = Json.pretty(inputJson)
+    validateJsonDataWithJsonSchema(mapper.writeValueAsString(promptVersionResponse.promptVersion.requestContract), inputJson, requestHistory)
+    coroutineScope {
+      launch {
+        requestHistoryService.saveRequestHistory(requestHistory)
+      }
+      launch {
+        llmResponse = sendRequestToLlm(
+          convertMessageToPrompt(
+            promptVersionResponse.promptVersion.promptTemplate,
+            inputJson,
+          ),
+          promptVersionResponse.promptVersion.llmModel,
+          false,
+          requestHistory,
+        )
+      }
+    }
+    val response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory)
+    if (promptVersionResponse.promptVersion.responseContract != null) {
+      validateJsonDataWithJsonSchema(mapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response as String, requestHistory)
+    }
+    requestHistory.new = false
+    requestHistory.status = Status.SUCCEEDED
+    requestHistory.completedAt = LocalDateTime.now(ZoneOffset.UTC)
+    requestHistoryService.saveRequestHistory(requestHistory)
+    val jdaResponse =  JdaResponse(
+      requestHistory.id,
+      jdaRequest.correlationId,
+      jdaRequest.prompt,
+      mapper.readTree(response as String),
+      MetaData(
+        RequestType.ASYNC,
+        requestHistory.receivedAt,
+        requestHistory.queuedAt,
+        requestHistory.receivedAt,
+        requestHistory.receivedAt,
+        requestHistory.completedAt,
+      ),
+    )
+    jdaMessagePublisher.publishJdaResponse(jdaResponse)
   }
 
   private suspend fun sendRequestToLlm(prompt: Prompt, model: String, useWebClient: Boolean, requestHistory: RequestHistory): Any {
