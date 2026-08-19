@@ -26,7 +26,6 @@ import java.time.Duration
 import java.util.UUID
 
 class JdaResourceTest(
-  @Autowired private val objectMapper: ObjectMapper,
   @param:Value("\${hmpps.sqs.queues.jdarequestqueues.queuename}") val jdaRequestQueueName: String,
   @param:Value("\${hmpps.sqs.queues.jdaresponsequeues.queuename}") val jdaResponseQueueName: String,
 ) : IntegrationTestBase() {
@@ -124,6 +123,10 @@ class JdaResourceTest(
         .queueUrl(queueUrl)
         .build(),
     )?.join()
+    val jdaResponse = mapper.readValue(messages?.messages()[0]?.body(), JdaResponse::class.java)
     assertEquals(1, messages?.messages()?.size)
+    assertEquals(correlationId, jdaResponse.correlationId)
+    assertEquals(promptKey, jdaResponse.prompt.key)
+    assertEquals(version, jdaResponse.prompt.version)
   }
 }
