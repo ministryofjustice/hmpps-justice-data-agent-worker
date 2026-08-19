@@ -4,7 +4,5 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaRespo
 
 interface JdaMessagePublisher {
 
-   // fun publishJdaRequest(jdaRequest: JdaRequest)
-
-   fun publishJdaResponse(jdaResponse: JdaResponse)
+  fun publishJdaResponse(jdaResponse: JdaResponse)
 }

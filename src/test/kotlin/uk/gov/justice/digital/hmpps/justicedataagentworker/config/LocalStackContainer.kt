@@ -18,10 +18,10 @@ object LocalStackContainer {
     registry.add("hmpps.sqs.enabled") { "true" }
     registry.add("hmpps.sqs.localstackUrl") { localStackContainer.endpoint }
     registry.add("hmpps.sqs.region") { localStackContainer.region }
-    registry.add("spring.cloud.aws.credentials.access-key") { localStackContainer.getAccessKey()}
-    registry.add("spring.cloud.aws.credentials.secret-key"){ localStackContainer.getSecretKey() }
-    registry.add("spring.cloud.aws.region.static") {  localStackContainer.getRegion()}
-    registry.add("spring.cloud.aws.sqs.endpoint") { localStackContainer.getEndpointOverride(LocalStackContainer.Service.SQS).toString()}
+    registry.add("spring.cloud.aws.credentials.access-key") { localStackContainer.getAccessKey() }
+    registry.add("spring.cloud.aws.credentials.secret-key") { localStackContainer.getSecretKey() }
+    registry.add("spring.cloud.aws.region.static") { localStackContainer.getRegion() }
+    registry.add("spring.cloud.aws.sqs.endpoint") { localStackContainer.getEndpointOverride(LocalStackContainer.Service.SQS).toString() }
   }
 
   private fun startLocalstackIfNotRunning(): org.testcontainers.containers.localstack.LocalStackContainer? {

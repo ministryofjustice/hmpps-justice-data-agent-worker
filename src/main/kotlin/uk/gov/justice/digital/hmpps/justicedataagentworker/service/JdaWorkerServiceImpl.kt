@@ -33,7 +33,7 @@ class JdaWorkerServiceImpl(
   private val promptService: PromptService,
   private val requestHistoryService: RequestHistoryService,
   private val mapper: ObjectMapper,
-  private val jdaMessagePublisher: JdaMessagePublisher
+  private val jdaMessagePublisher: JdaMessagePublisher,
 ) : JdaWorkerService {
 
   companion object {
@@ -91,7 +91,7 @@ class JdaWorkerServiceImpl(
       }
     }
     val response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory)
-    if (promptVersionResponse.promptVersion.responseContract != null) {
+    if ((promptVersionResponse.promptVersion.responseContract?.isNull) == false) {
       validateJsonDataWithJsonSchema(mapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response as String, requestHistory)
     }
     requestHistory.new = false
@@ -115,6 +115,7 @@ class JdaWorkerServiceImpl(
   }
 
   override suspend fun handleAsynchronousRequest(jdaRequest: JdaRequest) {
+    logger.info("Async request received for correlation id: ${jdaRequest.correlationId} to sent to Llm")
     val promptVersionResponse = promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version)
     val time = LocalDateTime.now(ZoneOffset.UTC)
     var llmResponse: Any? = null
@@ -150,14 +151,14 @@ class JdaWorkerServiceImpl(
       }
     }
     val response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory)
-    if (promptVersionResponse.promptVersion.responseContract != null) {
+    if (promptVersionResponse.promptVersion.responseContract?.isNull == false) {
       validateJsonDataWithJsonSchema(mapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response as String, requestHistory)
     }
     requestHistory.new = false
     requestHistory.status = Status.SUCCEEDED
     requestHistory.completedAt = LocalDateTime.now(ZoneOffset.UTC)
     requestHistoryService.saveRequestHistory(requestHistory)
-    val jdaResponse =  JdaResponse(
+    val jdaResponse = JdaResponse(
       requestHistory.id,
       jdaRequest.correlationId,
       jdaRequest.prompt,
