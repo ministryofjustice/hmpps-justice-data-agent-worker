@@ -22,7 +22,7 @@ class LiteLlmApiExtension :
 
   override fun beforeAll(context: ExtensionContext) {
     liteLlm.start()
-    liteLlm.stubGrantChatCompletion()
+    liteLlm.stubChatCompletion()
   }
 
   override fun beforeEach(context: ExtensionContext) {
@@ -39,7 +39,7 @@ class LiteLlmMockServer : WireMockServer(WIREMOCK_PORT) {
     private const val WIREMOCK_PORT = 8091
   }
 
-  fun stubGrantChatCompletion() {
+  fun stubChatCompletion() {
     stubFor(
       post(urlEqualTo("/chat/completions"))
         .willReturn(
@@ -48,31 +48,31 @@ class LiteLlmMockServer : WireMockServer(WIREMOCK_PORT) {
             .withBody(
               """
                 {
-                    "id": "chatcmpl-d007c735-e552-4d5d-bf0a-c36f21dade84",
-                    "created": 1784189820,
-                    "model": "test-model-x",
+                    "id": "chatcmpl-b41af546-94fa-4a22-ae90-1ad28b9d0622",
+                    "created": 1787087240,
+                    "model": "bedrock-claude-sonnet-4-5",
                     "object": "chat.completion",
                     "choices": [
                         {
                             "finish_reason": "stop",
                             "index": 0,
                             "message": {
-                                "content": "The capital of France is **Paris**.",
+                                "content": "```json\n{\n  \"query\": \"History of Boston\",\n  \"summary\": \"Boston is one of the oldest cities in the United States with a rich colonial and revolutionary history\",\n  \"key_periods\": [\n    {\n      \"period\": \"Founding (1630)\",\n      \"description\": \"Boston was founded by Puritan colonists from England, led by John Winthrop. It was named after Boston, Lincolnshire in England.\"\n    },\n    {\n      \"period\": \"Colonial Era (1630-1770s)\",\n      \"description\": \"Boston became a major colonial port and center of commerce, education, and religion in New England.\"\n    },\n    {\n      \"period\": \"American Revolution (1770s-1780s)\",\n      \"description\": \"Boston played a crucial role in the American Revolution, hosting events like the Boston Massacre (1770), Boston Tea Party (1773), and the Battle of Bunker Hill (1775).\"\n    },\n    {\n      \"period\": \"19th Century\",\n      \"description\": \"Boston became a major manufacturing and cultural center, known for its strong abolitionist movement and intellectual community.\"\n    },\n    {\n      \"period\": \"20th-21st Century\",\n      \"description\": \"Boston evolved into a global center for higher education, medicine, technology, and finance, while preserving its historical heritage.\"\n    }\n  ],\n  \"notable_events\": [\n    \"Boston Massacre (1770)\",\n    \"Boston Tea Party (1773)\",\n    \"Battle of Bunker Hill (1775)\",\n    \"Great Boston Fire (1872)\",\n    \"Boston Police Strike (1919)\",\n    \"Busing Crisis (1970s)\"\n  ],\n  \"cultural_significance\": \"Boston is known as the 'Cradle of Liberty' for its role in the American Revolution and remains an important educational and cultural center\"\n}\n```",
                                 "role": "assistant"
                             }
                         }
                     ],
                     "usage": {
-                        "completion_tokens": 11,
-                        "prompt_tokens": 11,
-                        "total_tokens": 22,
+                        "completion_tokens": 436,
+                        "prompt_tokens": 27,
+                        "total_tokens": 463,
                         "completion_tokens_details": {
                             "reasoning_tokens": 0,
-                            "text_tokens": 11
+                            "text_tokens": 436
                         },
                         "prompt_tokens_details": {
                             "cached_tokens": 0,
-                            "text_tokens": 11,
+                            "text_tokens": 27,
                             "cache_creation_tokens": 0
                         },
                         "cache_creation_input_tokens": 0,

@@ -21,7 +21,7 @@ class LiteLlmServiceTest : IntegrationTestBase() {
   @BeforeEach
   fun setUp() {
     liteLlm.start()
-    liteLlm.stubGrantChatCompletion()
+    liteLlm.stubChatCompletion()
   }
 
   @AfterEach

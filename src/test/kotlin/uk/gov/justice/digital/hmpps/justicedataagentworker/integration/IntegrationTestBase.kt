@@ -1,8 +1,12 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.integration
 
+import org.awaitility.kotlin.await
+import org.awaitility.kotlin.matches
+import org.awaitility.kotlin.untilCallTo
 import org.flywaydb.core.Flyway
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.extension.ExtendWith
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
@@ -13,11 +17,18 @@ import org.springframework.test.context.ActiveProfiles
 import org.springframework.test.context.DynamicPropertyRegistry
 import org.springframework.test.context.DynamicPropertySource
 import org.springframework.test.web.reactive.server.WebTestClient
+import software.amazon.awssdk.services.sqs.SqsAsyncClient
+import software.amazon.awssdk.services.sqs.model.GetQueueAttributesRequest
+import uk.gov.justice.digital.hmpps.justicedataagentworker.config.LocalStackContainer
+import uk.gov.justice.digital.hmpps.justicedataagentworker.config.LocalStackContainer.setLocalStackProperties
 import uk.gov.justice.digital.hmpps.justicedataagentworker.config.PostgresContainer
 import uk.gov.justice.digital.hmpps.justicedataagentworker.integration.wiremock.HmppsAuthApiExtension
 import uk.gov.justice.digital.hmpps.justicedataagentworker.integration.wiremock.HmppsAuthApiExtension.Companion.hmppsAuth
 import uk.gov.justice.digital.hmpps.justicedataagentworker.integration.wiremock.LiteLlmApiExtension
+import uk.gov.justice.hmpps.sqs.HmppsQueue
+import uk.gov.justice.hmpps.sqs.HmppsQueueService
 import uk.gov.justice.hmpps.test.kotlin.auth.JwtAuthorisationHelper
+import kotlin.text.toInt
 
 @ExtendWith(HmppsAuthApiExtension::class, LiteLlmApiExtension::class)
 @SpringBootTest(webEnvironment = RANDOM_PORT)
@@ -27,16 +38,37 @@ abstract class IntegrationTestBase internal constructor() {
 
   @Autowired private lateinit var flyway: Flyway
 
+  @Autowired
+  protected lateinit var hmppsQueueService: HmppsQueueService
+
+  internal val requestQueue by lazy { hmppsQueueService.findByQueueId("jdarequestqueues") as HmppsQueue }
+  internal val requestQueueAwsSqsClient by lazy { requestQueue.sqsClient }
+  internal val requestQueueUrl by lazy { requestQueue.queueUrl }
+
+  internal val responseQueue by lazy { hmppsQueueService.findByQueueId("jdaresponsequeues") as HmppsQueue }
+  internal val responseQueueAwsSqsClient by lazy { responseQueue.sqsClient }
+  internal val responseQueueUrl by lazy { responseQueue.queueUrl }
+
   companion object {
 
     @JvmStatic
     private val container = PostgresContainer.postgres
+
+    @JvmStatic
+    private val localStackContainer = LocalStackContainer.instance
+
+    @JvmStatic
+    @DynamicPropertySource
+    fun localstackProperties(registry: DynamicPropertyRegistry) {
+      localStackContainer?.also { setLocalStackProperties(it, registry) }
+    }
 
     @BeforeAll
     @JvmStatic
     fun startContainer() {
       // postgresContainer.start()
       // flyway
+      localStackContainer?.start()
     }
 
     @AfterAll
@@ -57,6 +89,20 @@ abstract class IntegrationTestBase internal constructor() {
         registry.add("spring.flyway.password", container::getPassword)
       }
     }
+  }
+
+  internal fun getNumberOfMessagesCurrentlyOnQueue(awsSqsClient: SqsAsyncClient, queueUrl: String): Int? {
+    val queueAttributes = awsSqsClient.getQueueAttributes(
+      GetQueueAttributesRequest.builder().queueUrl(queueUrl).attributeNamesWithStrings("ApproximateNumberOfMessages").build(),
+    ).get()
+    return queueAttributes.attributesAsStrings()["ApproximateNumberOfMessages"]?.toInt()
+  }
+
+  @BeforeEach
+  fun `Wait for empty queue`() {
+    await untilCallTo { getNumberOfMessagesCurrentlyOnQueue(requestQueueAwsSqsClient, requestQueueUrl) } matches { it == 0 }
+
+    await untilCallTo { getNumberOfMessagesCurrentlyOnQueue(responseQueueAwsSqsClient, responseQueueUrl) } matches { it == 0 }
   }
 
   @Autowired

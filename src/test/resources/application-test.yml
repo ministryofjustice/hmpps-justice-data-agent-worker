@@ -56,11 +56,19 @@ logging:
       migration: DEBUG
 
 hmpps:
-  #sqs:
-  #queues:
-  #domaineventsqueue:
-  #queueName: ${HMPPS_SQS_QUEUES_DOMAINEVENTSQUEUE_QUEUE_NAME}
-  #dlqName: ${HMPPS_SQS_QUEUES_DOMAINEVENTSQUEUE_DLQ_NAME}
+  sqs:
+    enabled: true
+    provider: localstack
+    localstackUrl: http://localhost:4566
+    region: eu-west-2
+    queues:
+      jdarequestqueues:
+        queuename: sqs_request_queue_name
+        dlqName: sqs_request_dlq_queue_name
+      jdaresponsequeues:
+        queuename: sqs_response_queue_name
+        dlqName: sqs_response_dlq_queue_name
+
   ai-gateway:
     api-key: randomValue
     base-url: http://localhost:8091
