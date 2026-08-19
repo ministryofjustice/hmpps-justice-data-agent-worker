@@ -10,7 +10,6 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
-import software.amazon.awssdk.services.sqs.model.GetQueueUrlRequest
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest
 import tools.jackson.databind.ObjectMapper
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptRequest
@@ -101,26 +100,17 @@ class JdaResourceTest(
     val promptKey = promptKey
     val version = 1
     val jdaRequest = DataGenerator.buildJdaRequest(correlationId, promptKey, version)
-    var sqsClient = hmppsQueueService
-      .findByQueueId("jdarequestqueues")!!.sqsClient
     val sqsTemplate =
       SqsTemplate
-        .newTemplate(sqsClient)
+        .newTemplate(requestQueueAwsSqsClient)
     logger.info("Sending jda response message to response queue: $jdaRequestQueueName")
     sqsTemplate.send { to -> to.queue(jdaRequestQueueName).payload(jdaRequest) }
 
     Thread.sleep(Duration.ofSeconds(15))
-    sqsClient = hmppsQueueService
-      .findByQueueId("jdaresponsequeues")!!.sqsClient
-    var queueUrl = sqsClient.getQueueUrl(
-      GetQueueUrlRequest.builder()
-        .queueName(jdaResponseQueueName)
-        .build(),
-    )?.join()?.queueUrl()
-    var messages = sqsClient.receiveMessage(
+    val messages = responseQueueAwsSqsClient.receiveMessage(
       ReceiveMessageRequest.builder()
         .maxNumberOfMessages(1)
-        .queueUrl(queueUrl)
+        .queueUrl(responseQueueUrl)
         .build(),
     )?.join()
     val jdaResponse = mapper.readValue(messages?.messages()[0]?.body(), JdaResponse::class.java)

@@ -12,6 +12,7 @@ import uk.gov.justice.hmpps.sqs.HmppsQueueService
 @Component
 class JdaMessagePublisherImpl(
   @param:Value("\${hmpps.sqs.queues.jdaresponsequeues.queuename}") private val responseQueueName: String,
+  @param:Value("\${hmpps.sqs.queues.jdaresponsequeues.dlqName}") private val responseDlqName: String,
 ) : JdaMessagePublisher {
   @Autowired
   private lateinit var hmppsQueueService: HmppsQueueService
@@ -23,14 +24,21 @@ class JdaMessagePublisherImpl(
   }
 
   override fun publishJdaResponse(jdaResponse: JdaResponse) {
-    logger.info("Publishing JDA request for correlation id: ${jdaResponse.correlationId}")
+    val awsSqsClient = hmppsQueueService
+      .findByQueueId("jdaresponsequeues")!!.sqsClient
     val sqsTemplate =
       SqsTemplate
         .newTemplate(
-          hmppsQueueService
-            .findByQueueId("jdaresponsequeues")!!.sqsClient,
+          awsSqsClient,
         )
-    logger.info("Sending jda response message to response queue: $responseQueueName")
-    sqsTemplate.send { to -> to.queue(responseQueueName).payload(jdaResponse) }
+    try {
+      logger.info("Sending JDA response message with correlation id: ${jdaResponse.correlationId} to queue: $responseQueueName")
+      sqsTemplate.send { to -> to.queue(responseQueueName).payload(jdaResponse) }
+      logger.info("Jda response message with correlation id: ${jdaResponse.correlationId} sent to queue: $responseQueueName")
+    } catch (e: Exception) {
+      logger.error("Exception occurred when sending message to queue: $responseQueueName with correlation id: ${jdaResponse.correlationId},  exception: ${e.message}")
+      sqsTemplate.send { to -> to.queue(responseDlqName).payload(jdaResponse) }
+      logger.info("Jda response message with correlation id: ${jdaResponse.correlationId} sent to dlq: $responseDlqName")
+    }
   }
 }
