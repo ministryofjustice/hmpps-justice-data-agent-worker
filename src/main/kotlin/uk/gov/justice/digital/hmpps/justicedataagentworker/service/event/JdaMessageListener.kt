@@ -4,5 +4,5 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaReques
 
 interface JdaMessageListener {
 
-  fun onJdaRequestMessageReceived(message: JdaRequest)
+  fun onJdaRequestMessageReceived(jdaRequest: JdaRequest)
 }

@@ -10,19 +10,26 @@ import org.springframework.ai.chat.client.ChatClientResponse
 import org.springframework.ai.chat.messages.SystemMessage
 import org.springframework.ai.chat.messages.UserMessage
 import org.springframework.ai.chat.prompt.Prompt
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
+import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest
+import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest
 import tools.jackson.databind.ObjectMapper
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.MetaData
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.RequestType
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.LiteLlmException
+import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.NotFoundException
+import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.SqsQueueException
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.ValidationException
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.RequestHistory
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.Status
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.event.JdaMessagePublisher
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.integration.LiteLlmService
 import uk.gov.justice.digital.hmpps.justicedataagentworker.validator.JsonSchemaValidator
+import uk.gov.justice.hmpps.sqs.HmppsQueueService
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
@@ -32,9 +39,14 @@ class JdaWorkerServiceImpl(
   private val liteLlmService: LiteLlmService,
   private val promptService: PromptService,
   private val requestHistoryService: RequestHistoryService,
-  private val mapper: ObjectMapper,
+  private val objectMapper: ObjectMapper,
   private val jdaMessagePublisher: JdaMessagePublisher,
+  @param:Value("\${hmpps.sqs.queues.jdarequestqueues.queuename}") private val requestQueueName: String,
+  @param:Value("\${hmpps.sqs.queues.jdarequestqueues.dlqName}") private val requestDlqName: String,
 ) : JdaWorkerService {
+
+  @Autowired
+  private lateinit var hmppsQueueService: HmppsQueueService
 
   companion object {
     private val logger = LoggerFactory.getLogger(this::class.java)
@@ -73,7 +85,7 @@ class JdaWorkerServiceImpl(
     )
     var inputJson = jdaRequest.requestData
     inputJson = Json.pretty(inputJson)
-    validateJsonDataWithJsonSchema(mapper.writeValueAsString(promptVersionResponse.promptVersion.requestContract), inputJson, requestHistory)
+    validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.requestContract), inputJson, requestHistory)
     coroutineScope {
       launch {
         requestHistoryService.saveRequestHistory(requestHistory)
@@ -92,7 +104,7 @@ class JdaWorkerServiceImpl(
     }
     val response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory)
     if ((promptVersionResponse.promptVersion.responseContract?.isNull) == false) {
-      validateJsonDataWithJsonSchema(mapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response as String, requestHistory)
+      validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response as String, requestHistory)
     }
     requestHistory.new = false
     requestHistory.status = Status.SUCCEEDED
@@ -102,7 +114,7 @@ class JdaWorkerServiceImpl(
       requestHistory.id,
       jdaRequest.correlationId,
       jdaRequest.prompt,
-      mapper.readTree(response as String),
+      objectMapper.readTree(response as String),
       MetaData(
         RequestType.SYNC,
         requestHistory.receivedAt,
@@ -133,7 +145,7 @@ class JdaWorkerServiceImpl(
     )
     var inputJson = jdaRequest.requestData
     inputJson = Json.pretty(inputJson)
-    validateJsonDataWithJsonSchema(mapper.writeValueAsString(promptVersionResponse.promptVersion.requestContract), inputJson, requestHistory)
+    validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.requestContract), inputJson, requestHistory)
     coroutineScope {
       launch {
         requestHistoryService.saveRequestHistory(requestHistory)
@@ -152,7 +164,7 @@ class JdaWorkerServiceImpl(
     }
     val response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory)
     if (promptVersionResponse.promptVersion.responseContract?.isNull == false) {
-      validateJsonDataWithJsonSchema(mapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response as String, requestHistory)
+      validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response as String, requestHistory)
     }
     requestHistory.new = false
     requestHistory.status = Status.SUCCEEDED
@@ -162,7 +174,7 @@ class JdaWorkerServiceImpl(
       requestHistory.id,
       jdaRequest.correlationId,
       jdaRequest.prompt,
-      mapper.readTree(response as String),
+      objectMapper.readTree(response as String),
       MetaData(
         RequestType.ASYNC,
         requestHistory.receivedAt,
@@ -173,6 +185,47 @@ class JdaWorkerServiceImpl(
       ),
     )
     jdaMessagePublisher.publishJdaResponse(jdaResponse)
+  }
+
+  override suspend fun submitAsynchronousRequest(jdaRequest: JdaRequest) {
+    logger.info("Send async jda request to the jda request queue")
+    jdaMessagePublisher.publishJdaRequest(jdaRequest)
+  }
+
+  override suspend fun dequeueResponse(): JdaResponse {
+    try {
+      logger.info("Dequeue jda response queue: $requestQueueName")
+      val responseQueue = hmppsQueueService
+        .findByQueueId("jdaresponsequeues")
+      val sqsClient = responseQueue?.sqsClient
+      val queueUrl = responseQueue?.queueUrl
+      val messages = sqsClient?.receiveMessage(
+        ReceiveMessageRequest.builder()
+          .maxNumberOfMessages(1)
+          .queueUrl(queueUrl)
+          .build(),
+      )?.join()
+      if (messages?.hasMessages() == true) {
+        val jdaResponse = objectMapper.readValue(messages.messages()[0]?.body(), JdaResponse::class.java)
+        logger.info("Deleting message from the jda response queue: $requestQueueName with correlation id: ${jdaResponse.correlationId}")
+        sqsClient.deleteMessage(
+          DeleteMessageRequest.builder()
+            .queueUrl(queueUrl)
+            .receiptHandle(messages.messages()[0]?.receiptHandle())
+            .build(),
+        )
+        logger.info("returning dequeued jda response with correlation id: ${jdaResponse.correlationId}")
+        return jdaResponse
+      }
+      throw NotFoundException("Queue is empty, no message in queue.")
+    } catch (e: Exception) {
+      logger.error("Error during dequeue response : ${e.message}")
+      if (e is NotFoundException) {
+        throw NotFoundException("Queue is empty, no message in queue to dequeue.") // http response code for this will be 404
+      }
+      val message = "Unexpected Exception during dequeue response queue: ${e.message}" // http response code for this will be 500
+      throw SqsQueueException(message)
+    }
   }
 
   private suspend fun sendRequestToLlm(prompt: Prompt, model: String, useWebClient: Boolean, requestHistory: RequestHistory): Any {

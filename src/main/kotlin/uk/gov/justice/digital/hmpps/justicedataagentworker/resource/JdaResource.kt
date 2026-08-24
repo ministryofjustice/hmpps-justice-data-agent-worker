@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -38,7 +39,7 @@ class JdaResource(private val jdaWorkerService: JdaWorkerService) {
       ),
       ApiResponse(
         responseCode = "403",
-        description = "Forbidden to access this endpoint. The issue can be logged staff and prisoner have different establishment.",
+        description = "Forbidden to access this endpoint. User do not have required role or permission.",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
     ],
@@ -49,6 +50,58 @@ class JdaResource(private val jdaWorkerService: JdaWorkerService) {
     @RequestBody jdaRequest: JdaRequest,
   ): ResponseEntity<JdaResponse> {
     val jdaResponse = jdaWorkerService.handleSynchronousRequest(jdaRequest)
+    return ResponseEntity.status(HttpStatus.OK).body(jdaResponse)
+  }
+
+  @Tag(name = "Jda requests")
+  @Operation(
+    summary = "Asynchronous request to jda worker.",
+    description = "This api endpoint is for sending asynchronous request  to jda worker.  Requires role ROLE_JUSTICE_DATA_AGENT_REQUESTS",
+    security = [SecurityRequirement(name = "JUSTICE_DATA_AGENT_REQUESTS")],
+    responses = [
+      ApiResponse(responseCode = "200", description = "Successful response from LLM"),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Forbidden to access this endpoint. User do not have required role or permission.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  @PostMapping("queuerequest")
+  @PreAuthorize("hasAnyRole('JUSTICE_DATA_AGENT_REQUESTS')")
+  suspend fun submitAsynchronousRequest(@RequestBody jdaRequest: JdaRequest): ResponseEntity<Void> {
+    jdaWorkerService.submitAsynchronousRequest(jdaRequest)
+    return ResponseEntity.status(HttpStatus.ACCEPTED).build()
+  }
+
+  @Tag(name = "Jda requests")
+  @Operation(
+    summary = "Asynchronous request to jda worker.",
+    description = "This api endpoint is for sending asynchronous request  to jda worker.  Requires role ROLE_JUSTICE_DATA_AGENT_REQUESTS",
+    security = [SecurityRequirement(name = "JUSTICE_DATA_AGENT_REQUESTS")],
+    responses = [
+      ApiResponse(responseCode = "200", description = "Successful response from LLM"),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Forbidden to access this endpoint. User do not have required role or permission.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  @GetMapping("dequeueresponse")
+  @PreAuthorize("hasAnyRole('JUSTICE_DATA_AGENT_REQUESTS')")
+  suspend fun dequeueResponse(): ResponseEntity<JdaResponse> {
+    val jdaResponse = jdaWorkerService.dequeueResponse()
     return ResponseEntity.status(HttpStatus.OK).body(jdaResponse)
   }
 

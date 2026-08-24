@@ -44,7 +44,7 @@ class PromptResource(
       ),
       ApiResponse(
         responseCode = "403",
-        description = "Forbidden to access this endpoint. The issue can be logged staff and prisoner have different establishment.",
+        description = "Forbidden to access this endpoint. User do not have required role or permission.",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
     ],
@@ -70,7 +70,7 @@ class PromptResource(
       ),
       ApiResponse(
         responseCode = "403",
-        description = "Forbidden to access this endpoint. The issue can be logged staff and prisoner have different establishment.",
+        description = "Forbidden to access this endpoint. User do not have required role or permission.",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
     ],
@@ -96,7 +96,7 @@ class PromptResource(
       ),
       ApiResponse(
         responseCode = "403",
-        description = "Forbidden to access this endpoint. The issue can be logged staff and prisoner have different establishment.",
+        description = "Forbidden to access this endpoint. User do not have required role or permission.",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
     ],
@@ -122,7 +122,7 @@ class PromptResource(
       ),
       ApiResponse(
         responseCode = "403",
-        description = "Forbidden to access this endpoint. The issue can be logged staff and prisoner have different establishment.",
+        description = "Forbidden to access this endpoint. User do not have required role or permission.",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
     ],
@@ -148,7 +148,7 @@ class PromptResource(
       ),
       ApiResponse(
         responseCode = "403",
-        description = "Forbidden to access this endpoint. The issue can be logged staff and prisoner have different establishment.",
+        description = "Forbidden to access this endpoint. User do not have required role or permission.",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
     ],
@@ -174,7 +174,7 @@ class PromptResource(
       ),
       ApiResponse(
         responseCode = "403",
-        description = "Forbidden to access this endpoint. The issue can be logged staff and prisoner have different establishment.",
+        description = "Forbidden to access this endpoint. User do not have required role or permission.",
         content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
       ),
     ],
