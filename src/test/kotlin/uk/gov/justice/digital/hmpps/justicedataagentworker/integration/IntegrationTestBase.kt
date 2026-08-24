@@ -103,6 +103,7 @@ abstract class IntegrationTestBase internal constructor() {
     await untilCallTo { getNumberOfMessagesCurrentlyOnQueue(requestQueueAwsSqsClient, requestQueueUrl) } matches { it == 0 }
 
     await untilCallTo { getNumberOfMessagesCurrentlyOnQueue(responseQueueAwsSqsClient, responseQueueUrl) } matches { it == 0 }
+    // responseQueueAwsSqsClient.pur
   }
 
   @Autowired
