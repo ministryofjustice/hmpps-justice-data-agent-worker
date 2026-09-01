@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.justicedataagentworker.service
 
 import com.fasterxml.uuid.Generators
 import com.openai.models.chat.completions.ChatCompletion
+import io.awspring.cloud.sqs.operations.SqsTemplate
 import io.swagger.v3.core.util.Json
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -61,8 +62,8 @@ class JdaWorkerServiceImpl(
     var response = liteLlmService.connect(prompt, model, useWebClient)
     response = convertLlmResponseToApiResponse(response, null)
     if (!jsonSchema.isNullOrBlank()) {
-      logger.info("Validating data with json schema: {}")
-      jsonSchemaValidator.validateJson(jsonSchema!!, response as String)
+      logger.info("Validating data with json schema")
+      jsonSchemaValidator.validateJson(jsonSchema, response as String)
     }
     return response
   }
@@ -151,15 +152,28 @@ class JdaWorkerServiceImpl(
         requestHistoryService.saveRequestHistory(requestHistory)
       }
       launch {
-        llmResponse = sendRequestToLlm(
-          convertMessageToPrompt(
-            promptVersionResponse.promptVersion.promptTemplate,
-            inputJson,
-          ),
-          promptVersionResponse.promptVersion.llmModel,
-          false,
-          requestHistory,
-        )
+        try {
+          llmResponse = sendRequestToLlm(
+            convertMessageToPrompt(
+              promptVersionResponse.promptVersion.promptTemplate,
+              inputJson,
+            ),
+            promptVersionResponse.promptVersion.llmModel,
+            false,
+            requestHistory,
+          )
+        } catch (e: Exception) {
+          val awsSqsClient = hmppsQueueService
+            .findByQueueId("jdarequestqueues")!!.sqsClient
+          val sqsTemplate =
+            SqsTemplate
+              .newTemplate(
+                awsSqsClient,
+              )
+          logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
+          sqsTemplate.send { to -> to.queue(requestDlqName).payload(jdaRequest) }
+          logger.info("Jda request message with correlation id: ${jdaRequest.correlationId} sent to dlq name: $requestDlqName")
+        }
       }
     }
     val response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory)
