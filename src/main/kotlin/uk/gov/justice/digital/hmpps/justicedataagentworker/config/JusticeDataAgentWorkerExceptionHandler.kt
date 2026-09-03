@@ -11,6 +11,7 @@ import org.springframework.security.access.AccessDeniedException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
 import org.springframework.web.servlet.resource.NoResourceFoundException
+import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.JdaValidationException
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.NotFoundException
 import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
 
@@ -18,6 +19,17 @@ import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
 class JusticeDataAgentWorkerExceptionHandler {
   @ExceptionHandler(ValidationException::class)
   fun handleValidationException(e: ValidationException): ResponseEntity<ErrorResponse> = ResponseEntity
+    .status(BAD_REQUEST)
+    .body(
+      ErrorResponse(
+        status = BAD_REQUEST,
+        userMessage = "Validation failure: ${e.message}",
+        developerMessage = e.message,
+      ),
+    ).also { log.info("Validation exception: {}", e.message) }
+
+  @ExceptionHandler(JdaValidationException::class)
+  fun handleValidationException(e: JdaValidationException): ResponseEntity<ErrorResponse> = ResponseEntity
     .status(BAD_REQUEST)
     .body(
       ErrorResponse(

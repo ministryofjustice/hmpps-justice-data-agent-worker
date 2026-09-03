@@ -8,7 +8,7 @@ import com.networknt.schema.SpecVersion
 import com.networknt.schema.ValidationMessage
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Component
-import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.ValidationException
+import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.JdaValidationException
 
 @Component
 class JsonSchemaValidator {
@@ -22,7 +22,7 @@ class JsonSchemaValidator {
     val errors: MutableSet<ValidationMessage> = jsonSchema.validate(jsonNode)
     if (errors.isNotEmpty()) {
       logger.error("Error validating json schema")
-      throw ValidationException("Schema validation failed:\n${errors.toList().joinToString("\n")}")
+      throw JdaValidationException("Schema validation failed:\n${errors.toList().joinToString("\n")}")
     }
   }
 }

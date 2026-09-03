@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Assertions
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.test.context.ActiveProfiles
-import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.ValidationException
+import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.JdaValidationException
 import uk.gov.justice.digital.hmpps.justicedataagentworker.integration.IntegrationTestBase
 
 @ActiveProfiles("test")
@@ -201,6 +201,6 @@ class JsonSchemaValidatorTest : IntegrationTestBase() {
       "        ]\n" +
       "    }\n" +
       "]"
-    Assertions.assertThrows(ValidationException::class.java) { validator.validateJson(jsonSchema, json) }
+    Assertions.assertThrows(JdaValidationException::class.java) { validator.validateJson(jsonSchema, json) }
   }
 }

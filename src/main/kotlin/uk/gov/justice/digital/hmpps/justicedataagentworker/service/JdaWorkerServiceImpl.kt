@@ -21,16 +21,17 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaReques
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.MetaData
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.RequestType
+import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.JdaValidationException
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.LiteLlmException
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.NotFoundException
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.SqsQueueException
-import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.ValidationException
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.RequestHistory
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.Status
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.event.JdaMessagePublisher
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.integration.LiteLlmService
 import uk.gov.justice.digital.hmpps.justicedataagentworker.validator.JsonSchemaValidator
 import uk.gov.justice.hmpps.sqs.HmppsQueueService
+import java.time.Duration
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
@@ -115,6 +116,7 @@ class JdaWorkerServiceImpl(
       requestHistory.id,
       jdaRequest.correlationId,
       jdaRequest.prompt,
+      uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.SUCCEEDED,
       objectMapper.readTree(response as String),
       MetaData(
         RequestType.SYNC,
@@ -123,6 +125,7 @@ class JdaWorkerServiceImpl(
         requestHistory.receivedAt,
         requestHistory.receivedAt,
         requestHistory.completedAt,
+        Duration.between(requestHistory.receivedAt, requestHistory.completedAt).toMillis(),
       ),
     )
   }
@@ -146,7 +149,6 @@ class JdaWorkerServiceImpl(
     )
     var inputJson = jdaRequest.requestData
     inputJson = Json.pretty(inputJson)
-    validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.requestContract), inputJson, requestHistory)
     coroutineScope {
       launch {
         requestHistoryService.saveRequestHistory(requestHistory)
@@ -188,6 +190,7 @@ class JdaWorkerServiceImpl(
       requestHistory.id,
       jdaRequest.correlationId,
       jdaRequest.prompt,
+      uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.SUCCEEDED,
       objectMapper.readTree(response as String),
       MetaData(
         RequestType.ASYNC,
@@ -196,12 +199,32 @@ class JdaWorkerServiceImpl(
         requestHistory.receivedAt,
         requestHistory.receivedAt,
         requestHistory.completedAt,
+        Duration.between(requestHistory.receivedAt, requestHistory.completedAt).toMillis(),
       ),
     )
     jdaMessagePublisher.publishJdaResponse(jdaResponse)
   }
 
   override suspend fun submitAsynchronousRequest(jdaRequest: JdaRequest) {
+    logger.info("Async jda request received to submit to request queue for correlation id: ${jdaRequest.correlationId} to sent to Llm")
+    val promptVersionResponse = promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version)
+    var inputJson = jdaRequest.requestData
+    inputJson = Json.pretty(inputJson)
+    validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.requestContract), inputJson, null)
+    val time = LocalDateTime.now(ZoneOffset.UTC)
+    val requestHistory = RequestHistory(
+      Generators.timeBasedEpochGenerator().generate(),
+      true,
+      jdaRequest.correlationId,
+      promptVersionResponse.id,
+      null,
+      time,
+      null,
+      Status.QUEUED,
+      null,
+      null,
+    )
+    requestHistoryService.saveRequestHistory(requestHistory)
     logger.info("Send async jda request to the jda request queue")
     jdaMessagePublisher.publishJdaRequest(jdaRequest)
   }
@@ -268,17 +291,19 @@ class JdaWorkerServiceImpl(
     return Prompt(list)
   }
 
-  private suspend fun validateJsonDataWithJsonSchema(jsonSchema: String, data: String, requestHistory: RequestHistory) {
+  private suspend fun validateJsonDataWithJsonSchema(jsonSchema: String, data: String, requestHistory: RequestHistory?) {
     try {
       jsonSchemaValidator.validateJson(jsonSchema, data)
     } catch (e: Exception) {
       logger.error("Error occurred while schema validation: ${e.message}")
-      requestHistory.new = false
-      requestHistory.status = Status.REJECTED
-      requestHistory.errorAt = LocalDateTime.now(ZoneOffset.UTC)
-      requestHistory.errorMessage = e.message
-      requestHistoryService.saveRequestHistory(requestHistory)
-      throw ValidationException("Error occurred validating with json schema: ${e.message}")
+      if (requestHistory != null) {
+        requestHistory.new = false
+        requestHistory.status = Status.REJECTED
+        requestHistory.errorAt = LocalDateTime.now(ZoneOffset.UTC)
+        requestHistory.errorMessage = e.message
+        requestHistoryService.saveRequestHistory(requestHistory)
+      }
+      throw JdaValidationException("Error occurred validating with json schema: ${e.message}")
     }
   }
 
