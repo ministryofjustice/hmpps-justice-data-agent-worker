@@ -169,25 +169,24 @@ class PromptServiceImpl(
     LocalDateTime.now(ZoneOffset.UTC),
   )
 
-  private fun convertPromptToPromptResponse(prompt: Prompt, promptVersion: PromptVersion): PromptResponse =
-    PromptResponse(
-      prompt.id,
-      prompt.promptKey,
-      prompt.description,
-      prompt.isDeleted,
-      prompt.createdBy,
-      prompt.createdDate,
-      PromptVersionResponse(
-        promptVersion.id,
-        promptVersion.version,
-        promptVersion.llmModel,
-        promptVersion.promptTemplate,
-        mapper.readTree(promptVersion.requestContract.asString()),
-        promptVersion.responseContract?.let { mapper.readTree(it.asString()) },
-        promptVersion.createdBy,
-        promptVersion.createdDate,
-      ),
-    )
+  private fun convertPromptToPromptResponse(prompt: Prompt, promptVersion: PromptVersion): PromptResponse = PromptResponse(
+    prompt.id,
+    prompt.promptKey,
+    prompt.description,
+    prompt.isDeleted,
+    prompt.createdBy,
+    prompt.createdDate,
+    PromptVersionResponse(
+      promptVersion.id,
+      promptVersion.version,
+      promptVersion.llmModel,
+      promptVersion.promptTemplate,
+      mapper.readTree(promptVersion.requestContract.asString()),
+      promptVersion.responseContract?.let { mapper.readTree(it.asString()) },
+      promptVersion.createdBy,
+      promptVersion.createdDate,
+    ),
+  )
 
   private fun convertPromptsToPromptsResponse(promptVersions: List<PromptVersion>): List<PromptVersionResponse> {
     val promptVersionsResponse = mutableListOf<PromptVersionResponse>()
