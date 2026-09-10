@@ -162,6 +162,32 @@ class PromptResource(
 
   @Tag(name = "prompts")
   @Operation(
+    summary = "Get a prompt and all versions by key.",
+    description = "This api endpoint is for getting prompt and all its versions by key.  Requires role ROLE_JUSTICE_DATA_AGENT_PROMPTS",
+    security = [SecurityRequirement(name = "JUSTICE_DATA_AGENT_PROMPTS")],
+    responses = [
+      ApiResponse(responseCode = "200", description = "Successful response from LLM"),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Forbidden to access this endpoint. User does not have required role or permission.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  @GetMapping("/prompts/{key}/versions", produces = [MediaType.APPLICATION_JSON_VALUE])
+  @PreAuthorize("hasAnyRole('JUSTICE_DATA_AGENT_PROMPTS')")
+  suspend fun getPromptandVersionsByKey(@PathVariable key: String): ResponseEntity<PromptsResponse> {
+    val prompt = promptService.getPromptAndVersionsByKey(key)
+    return ResponseEntity.status(HttpStatus.OK).body(prompt)
+  }
+
+  @Tag(name = "prompts")
+  @Operation(
     summary = "Delete a prompt by key",
     description = "This api endpoint delete prompt by key.  Requires role ROLE_JUSTICE_DATA_AGENT_PROMPTS",
     security = [SecurityRequirement(name = "JUSTICE_DATA_AGENT_PROMPTS")],
