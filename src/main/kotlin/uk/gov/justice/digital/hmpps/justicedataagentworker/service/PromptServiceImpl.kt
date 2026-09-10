@@ -20,7 +20,7 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.repository.PromptRepo
 import uk.gov.justice.digital.hmpps.justicedataagentworker.repository.PromptVersionRepository
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import java.util.UUID
+import java.util.*
 
 @Service
 class PromptServiceImpl(
@@ -46,7 +46,8 @@ class PromptServiceImpl(
     if (promptVersion != null) {
       version = promptVersion.version + 1
     }
-    promptVersion = convertPromptVersionRequestToEntity(promptEntity.id, promptEntity.createdBy, version, promptRequest.promptVersion)
+    promptVersion =
+      convertPromptVersionRequestToEntity(promptEntity.id, promptEntity.createdBy, version, promptRequest.promptVersion)
     val promptVersionEntity = promptVersionRepository.save(promptVersion)
     logger.info("returning prompt created by ${promptRequest.createdBy}")
     return convertPromptToPromptResponse(promptEntity, promptVersionEntity)
@@ -63,7 +64,8 @@ class PromptServiceImpl(
       throw NotFoundException("Prompt with key ${promptRequest.promptKey} do not have any prompt version")
     }
     val version = promptVersion.version + 1
-    promptVersion = convertPromptVersionRequestToEntity(prompt.id, prompt.createdBy, version, promptRequest.promptVersion)
+    promptVersion =
+      convertPromptVersionRequestToEntity(prompt.id, prompt.createdBy, version, promptRequest.promptVersion)
     val promptVersionEntity = promptVersionRepository.save(promptVersion)
     logger.info("returning updated prompt for key ${promptRequest.promptKey}")
     return convertPromptToPromptResponse(prompt, promptVersionEntity)
@@ -105,6 +107,23 @@ class PromptServiceImpl(
     return convertPromptToPromptResponse(prompt = prompt, promptVersion = promptVersion)
   }
 
+  override suspend fun getPromptAndVersionsByKey(key: String): PromptsResponse {
+    val prompt = promptRepository.findPromptByPromptKeyAndIsDeleted(key, false)
+    if (prompt == null) {
+      throw NotFoundException("Prompt with key $key not found.")
+    }
+    val promptVersions = promptVersionRepository.findPromptVersionsByPromptIdOrderByVersionAsc(prompt.id)
+    return PromptsResponse(
+      prompt.id,
+      prompt.promptKey,
+      prompt.description,
+      prompt.isDeleted,
+      prompt.createdBy,
+      prompt.createdDate,
+      convertPromptsToPromptsResponse(promptVersions),
+    )
+  }
+
   override suspend fun getPromptByKey(key: String): PromptResponse {
     val prompt = promptRepository.findPromptByPromptKeyAndIsDeleted(key, false)
     if (prompt == null) {
@@ -133,7 +152,12 @@ class PromptServiceImpl(
     LocalDateTime.now(ZoneOffset.UTC),
   )
 
-  fun convertPromptVersionRequestToEntity(promptId: UUID, createdBy: UUID, version: Int, promptVersionRequest: PromptVersionRequest): PromptVersion = PromptVersion(
+  fun convertPromptVersionRequestToEntity(
+    promptId: UUID,
+    createdBy: UUID,
+    version: Int,
+    promptVersionRequest: PromptVersionRequest,
+  ): PromptVersion = PromptVersion(
     Generators.timeBasedEpochGenerator().generate(),
     version,
     promptId,

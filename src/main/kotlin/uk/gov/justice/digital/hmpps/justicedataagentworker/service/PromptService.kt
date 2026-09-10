@@ -11,7 +11,9 @@ interface PromptService {
 
   suspend fun getPrompts(): List<PromptsResponse> // return all prompts
 
-  suspend fun getPromptsByKeyAndVersion(key: String, version: Int): PromptResponse //
+  suspend fun getPromptsByKeyAndVersion(key: String, version: Int): PromptResponse
+
+  suspend fun getPromptAndVersionsByKey(key: String): PromptsResponse
 
   suspend fun getPromptByKey(key: String): PromptResponse // return prompt with latest version
 

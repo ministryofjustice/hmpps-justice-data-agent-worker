@@ -191,6 +191,27 @@ class PromptResourceTest : IntegrationTestBase() {
   }
 
   @Test
+  fun `get Prompt and versions by key`() {
+    val response = webTestClient.get().uri("/v1/prompts/$promptKey/versions")
+      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
+      .header("Content-Type", "application/json")
+      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+      .accept(MediaType.APPLICATION_JSON)
+      .exchange()
+      .expectStatus().isOk
+      .expectHeader().contentType(MediaType.APPLICATION_JSON_VALUE)
+      .expectBody(object : ParameterizedTypeReference<PromptsResponse>() {})
+      .consumeWith(System.out::println)
+      .returnResult()
+      .responseBody as PromptsResponse
+    assertNotNull(response)
+    assertEquals(promptKey, response.promptKey)
+    assertEquals(1, response.promptVersions.size)
+    assertEquals(1, response.promptVersions[0].version)
+    assertEquals(createdBy, response.createdBy)
+  }
+
+  @Test
   fun `get prompt by random key`() {
     val response = webTestClient.get().uri("/v1/prompts/${UUID.randomUUID()}")
       .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
