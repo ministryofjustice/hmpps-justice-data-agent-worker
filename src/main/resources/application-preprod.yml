@@ -1,0 +1,4 @@
+hmpps:
+  ai-gateway:
+    model:
+      prefix: bedrock-dpr-preprod
