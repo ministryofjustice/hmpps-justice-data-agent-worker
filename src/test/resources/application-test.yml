@@ -65,6 +65,6 @@ hmpps:
 
   ai-gateway:
     model:
-      prefix: bedrock-dpr-development
+      prefix: bedrock-dpr-test
     api-key: randomValue
     base-url: http://localhost:8091
