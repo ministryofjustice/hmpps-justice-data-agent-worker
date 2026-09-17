@@ -5,6 +5,9 @@ spring:
     locations: classpath:db/migration/dev
 
 hmpps:
+    ai-gateway:
+      model:
+        prefix: bedrock-dpr-development
     sqs:
       enabled: true
       queues:

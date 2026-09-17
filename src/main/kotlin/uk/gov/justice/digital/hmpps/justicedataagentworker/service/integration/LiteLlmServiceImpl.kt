@@ -6,11 +6,13 @@ import com.openai.models.chat.completions.ChatCompletion
 import com.openai.models.completions.CompletionUsage
 import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.prompt.Prompt
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.LiteLlmException
 
 @Component
 class LiteLlmServiceImpl(
+  @param:Value("\${hmpps.ai-gateway.model.prefix}") private val modelPrefix: String,
   private val liteLlmWebClient: LiteLlmWebClient,
   private val openAiClient: OpenAiClient,
 ) : LiteLlmService {
@@ -26,7 +28,7 @@ class LiteLlmServiceImpl(
     var response: Any? = null
     if (useWebClient) {
       logger.info("Connecting to lite LLM using web client")
-      val chatCompletionRequest = buildChatCompletionRequest(prompt, model)
+      val chatCompletionRequest = buildChatCompletionRequest(prompt, "$modelPrefix-$model")
       response = liteLlmWebClient.liteLlmChatCompletion(chatCompletionRequest)
       response = buildChatCompletion(response)
     } else {

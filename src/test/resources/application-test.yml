@@ -64,5 +64,7 @@ hmpps:
         dlqName: sqs_response_dlq_queue_name
 
   ai-gateway:
+    model:
+      prefix: bedrock-dpr-test
     api-key: randomValue
     base-url: http://localhost:8091
