@@ -1,4 +1,4 @@
 hmpps:
   ai-gateway:
     model:
-      prefix: bedrock-dpr-prod
+      prefix: bedrock-dpr-production
