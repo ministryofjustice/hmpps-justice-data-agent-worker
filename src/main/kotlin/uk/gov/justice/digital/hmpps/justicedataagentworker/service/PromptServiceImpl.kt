@@ -157,17 +157,22 @@ class PromptServiceImpl(
     createdBy: UUID,
     version: Int,
     promptVersionRequest: PromptVersionRequest,
-  ): PromptVersion = PromptVersion(
-    Generators.timeBasedEpochGenerator().generate(),
-    version,
-    promptId,
-    promptVersionRequest.llmModel,
-    promptVersionRequest.promptTemplate,
-    Json.of(mapper.writeValueAsString(promptVersionRequest.requestContract)),
-    promptVersionRequest.responseContract?.let { Json.of(mapper.writeValueAsString(it)) },
-    createdBy,
-    LocalDateTime.now(ZoneOffset.UTC),
-  )
+  ): PromptVersion {
+    val time = LocalDateTime.now(ZoneOffset.UTC)
+    return PromptVersion(
+      Generators.timeBasedEpochGenerator().generate(),
+      version,
+      promptId,
+      promptVersionRequest.llmModel,
+      promptVersionRequest.promptTemplate,
+      Json.of(mapper.writeValueAsString(promptVersionRequest.requestContract)),
+      promptVersionRequest.responseContract?.let { Json.of(mapper.writeValueAsString(it)) },
+      createdBy,
+      time,
+      createdBy.toString(),
+      time,
+    )
+  }
 
   private fun convertPromptToPromptResponse(prompt: Prompt, promptVersion: PromptVersion): PromptResponse = PromptResponse(
     prompt.id,
