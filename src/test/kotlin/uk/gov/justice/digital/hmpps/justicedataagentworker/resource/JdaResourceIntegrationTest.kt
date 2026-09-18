@@ -12,6 +12,8 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest
 import tools.jackson.databind.ObjectMapper
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaRequest
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.Prompt
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptVersionRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaResponse
@@ -21,10 +23,11 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.repository.PromptRepo
 import uk.gov.justice.digital.hmpps.justicedataagentworker.repository.PromptVersionRepository
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.event.JdaMessagePublisherImpl.Companion.logger
 import uk.gov.justice.digital.hmpps.justicedataagentworker.utility.DataGenerator
+import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
 import java.time.Duration
 import java.util.*
 
-class JdaResourceTest(
+class JdaResourceIntegrationTest(
   @Autowired private val objectMapper: ObjectMapper,
   @param:Value("\${hmpps.sqs.queues.jdarequestqueues.queuename}") val jdaRequestQueueName: String,
   @param:Value("\${hmpps.sqs.queues.jdaresponsequeues.queuename}") val jdaResponseQueueName: String,
@@ -100,6 +103,75 @@ class JdaResourceTest(
   }
 
   @Test
+  fun `submit synchronous request with input data different than request contract`() {
+    webTestClient.post().uri("/v1/submitrequest")
+      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_REQUESTS")))
+      .header("Content-Type", "application/json")
+      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+      .bodyValue(
+        JdaRequest(
+          correlationId = UUID.randomUUID(),
+          prompt = Prompt(promptKey, 1),
+          requestData = """
+            [{
+            "id" : 1,
+            "text" : "test"
+            }]
+          """.trimIndent(),
+        ),
+      )
+      .accept(MediaType.APPLICATION_JSON)
+      .exchange()
+      .expectStatus().isBadRequest
+      .expectHeader().contentType(MediaType.APPLICATION_JSON_VALUE)
+      .expectBody(object : ParameterizedTypeReference<ErrorResponse>() {})
+      .consumeWith(System.out::println)
+      .returnResult()
+  }
+
+  @Test
+  fun `submit synchronous request with different role`() {
+    val response = webTestClient.post().uri("/v1/submitrequest")
+      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_REQUESTS_TEST")))
+      .header("Content-Type", "application/json")
+      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+      .bodyValue(
+        DataGenerator.buildJdaRequest(UUID.randomUUID(), promptKey, 1),
+      )
+      .accept(MediaType.APPLICATION_JSON)
+      .exchange()
+      .expectStatus().isForbidden
+      .expectHeader().contentType(MediaType.APPLICATION_JSON_VALUE)
+      .expectBody(object : ParameterizedTypeReference<ErrorResponse>() {})
+      .consumeWith(System.out::println)
+      .returnResult()
+      .responseBody as ErrorResponse
+
+    assertEquals(403, response.status)
+  }
+
+  @Test
+  fun `submit asynchronous request with different role`() {
+    val response = webTestClient.post().uri("/v1/queuerequest")
+      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_REQUESTS_TEST")))
+      .header("Content-Type", "application/json")
+      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+      .bodyValue(
+        DataGenerator.buildJdaRequest(UUID.randomUUID(), promptKey, 1),
+      )
+      .accept(MediaType.APPLICATION_JSON)
+      .exchange()
+      .expectStatus().isForbidden
+      .expectHeader().contentType(MediaType.APPLICATION_JSON_VALUE)
+      .expectBody(object : ParameterizedTypeReference<ErrorResponse>() {})
+      .consumeWith(System.out::println)
+      .returnResult()
+      .responseBody as ErrorResponse
+
+    assertEquals(403, response.status)
+  }
+
+  @Test
   fun `submit async queue request to request queue and publish llm response to response queue`() {
     val correlationId = UUID.randomUUID()
     val promptKey = promptKey
@@ -155,7 +227,7 @@ class JdaResourceTest(
     Thread.sleep(Duration.ofSeconds(15))
 
     // Send request to dequeue message for jda response queue.
-    val jdaresponse = webTestClient.get().uri("/v1/dequeueresponse")
+    val jdaResponse = webTestClient.get().uri("/v1/dequeueresponse")
       .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_REQUESTS")))
       .header("Content-Type", "application/json")
       .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
@@ -169,9 +241,9 @@ class JdaResourceTest(
       .responseBody as JdaResponse
 
     // Assert message added in jda request queue after api call to endpoint v1/queuerequest
-    assertEquals(correlationId, jdaresponse.correlationId)
-    assertEquals(promptKey, jdaresponse.prompt.key)
-    assertEquals(version, jdaresponse.prompt.version)
+    assertEquals(correlationId, jdaResponse.correlationId)
+    assertEquals(promptKey, jdaResponse.prompt.key)
+    assertEquals(version, jdaResponse.prompt.version)
 
     // Verify no message in jda response queue after call to endpoint /v1/dequeueresponse.
     messages = responseQueueAwsSqsClient.receiveMessage(

@@ -24,7 +24,7 @@ import java.time.Duration
 import java.util.UUID
 import kotlin.random.Random
 
-class PromptResourceTest : IntegrationTestBase() {
+class PromptResourceIntegrationTest : IntegrationTestBase() {
   @Autowired
   private lateinit var promptRepository: PromptRepository
 
@@ -171,6 +171,24 @@ class PromptResourceTest : IntegrationTestBase() {
   }
 
   @Test
+  fun `get prompts by different role`() {
+    val response = webTestClient.get().uri("/v1/prompts")
+      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS_TEST")))
+      .header("Content-Type", "application/json")
+      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+      .accept(MediaType.APPLICATION_JSON)
+      .exchange()
+      .expectStatus().isForbidden
+      .expectHeader().contentType(MediaType.APPLICATION_JSON_VALUE)
+      .expectBody(object : ParameterizedTypeReference<ErrorResponse>() {})
+      .consumeWith(System.out::println)
+      .returnResult()
+      .responseBody as ErrorResponse
+
+    assertEquals(403, response.status)
+  }
+
+  @Test
   fun `get Prompt by key`() {
     val response = webTestClient.get().uri("/v1/prompts/$promptKey")
       .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
@@ -188,6 +206,24 @@ class PromptResourceTest : IntegrationTestBase() {
     assertEquals(promptKey, response.promptKey)
     assertEquals(1, response.promptVersion.version)
     assertEquals(createdBy, response.createdBy)
+  }
+
+  @Test
+  fun `get Prompt by random key`() {
+    val response = webTestClient.get().uri("/v1/prompts/${UUID.randomUUID()}")
+      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
+      .header("Content-Type", "application/json")
+      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+      .accept(MediaType.APPLICATION_JSON)
+      .exchange()
+      .expectStatus().isNotFound
+      .expectHeader().contentType(MediaType.APPLICATION_JSON_VALUE)
+      .expectBody(object : ParameterizedTypeReference<ErrorResponse>() {})
+      .consumeWith(System.out::println)
+      .returnResult()
+      .responseBody as ErrorResponse
+
+    assertEquals(404, response.status)
   }
 
   @Test
@@ -212,6 +248,24 @@ class PromptResourceTest : IntegrationTestBase() {
   }
 
   @Test
+  fun `get Prompt and versions by random key`() {
+    val response = webTestClient.get().uri("/v1/prompts/${UUID.randomUUID()}/versions")
+      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
+      .header("Content-Type", "application/json")
+      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+      .accept(MediaType.APPLICATION_JSON)
+      .exchange()
+      .expectStatus().isNotFound
+      .expectHeader().contentType(MediaType.APPLICATION_JSON_VALUE)
+      .expectBody(object : ParameterizedTypeReference<ErrorResponse>() {})
+      .consumeWith(System.out::println)
+      .returnResult()
+      .responseBody as ErrorResponse
+
+    assertEquals(404, response.status)
+  }
+
+  @Test
   fun `get prompt by random key`() {
     val response = webTestClient.get().uri("/v1/prompts/${UUID.randomUUID()}")
       .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
@@ -225,6 +279,8 @@ class PromptResourceTest : IntegrationTestBase() {
       .consumeWith(System.out::println)
       .returnResult()
       .responseBody as ErrorResponse
+
+    assertEquals(404, response.status)
   }
 
   @Test
