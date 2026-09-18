@@ -27,7 +27,7 @@ import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
 import java.time.Duration
 import java.util.*
 
-class JdaResourceTest(
+class JdaResourceIntegrationTest(
   @Autowired private val objectMapper: ObjectMapper,
   @param:Value("\${hmpps.sqs.queues.jdarequestqueues.queuename}") val jdaRequestQueueName: String,
   @param:Value("\${hmpps.sqs.queues.jdaresponsequeues.queuename}") val jdaResponseQueueName: String,
@@ -117,7 +117,7 @@ class JdaResourceTest(
             "id" : 1,
             "text" : "test"
             }]
-          """.trimIndent()
+          """.trimIndent(),
         ),
       )
       .accept(MediaType.APPLICATION_JSON)

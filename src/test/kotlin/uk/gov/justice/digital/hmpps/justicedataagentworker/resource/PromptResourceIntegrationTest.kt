@@ -24,7 +24,7 @@ import java.time.Duration
 import java.util.UUID
 import kotlin.random.Random
 
-class PromptResourceTest : IntegrationTestBase() {
+class PromptResourceIntegrationTest : IntegrationTestBase() {
   @Autowired
   private lateinit var promptRepository: PromptRepository
 
