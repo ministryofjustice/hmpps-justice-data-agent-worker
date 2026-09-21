@@ -11,10 +11,12 @@ import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaDequeReceipt
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.JdaWorkerService
@@ -103,6 +105,32 @@ class JdaResource(private val jdaWorkerService: JdaWorkerService) {
   suspend fun dequeueResponse(): ResponseEntity<JdaResponse> {
     val jdaResponse = jdaWorkerService.dequeueResponse()
     return ResponseEntity.status(HttpStatus.OK).body(jdaResponse)
+  }
+
+  @Tag(name = "Jda requests")
+  @Operation(
+    summary = "Request to delete message from JDA response queue",
+    description = "This api endpoint is for deleting message from queue. Requires role ROLE_JUSTICE_DATA_AGENT_REQUESTS",
+    security = [SecurityRequirement(name = "JUSTICE_DATA_AGENT_REQUESTS")],
+    responses = [
+      ApiResponse(responseCode = "200", description = "Successful delete message from JDA response queue"),
+      ApiResponse(
+        responseCode = "401",
+        description = "Unauthorized to access this endpoint",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+      ApiResponse(
+        responseCode = "403",
+        description = "Forbidden to access this endpoint. User does not have required role or permission.",
+        content = [Content(mediaType = "application/json", schema = Schema(implementation = ErrorResponse::class))],
+      ),
+    ],
+  )
+  @PostMapping("dequeueresponse")
+  @PreAuthorize("hasAnyRole('JUSTICE_DATA_AGENT_REQUESTS')")
+  suspend fun deleteMessageFromQueue(@RequestBody receipt: JdaDequeReceipt): ResponseEntity<Void> {
+    jdaWorkerService.deleteMessageFromResponseQueue(receipt)
+    return ResponseEntity.status(HttpStatus.OK).build()
   }
 
   /*@PostMapping("v1/chat/completion", consumes = [APPLICATION_JSON_VALUE], produces = [APPLICATION_JSON_VALUE])

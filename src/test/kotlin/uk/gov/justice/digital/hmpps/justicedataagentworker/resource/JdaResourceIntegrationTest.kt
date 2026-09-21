@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest
 import tools.jackson.databind.ObjectMapper
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaDequeReceipt
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.Prompt
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptRequest
@@ -198,7 +199,7 @@ class JdaResourceIntegrationTest(
   }
 
   @Test
-  fun `submit queue request and  get dequeue response`() {
+  fun `submit queue request, get dequeue response and delete message using receipt id`() {
     // Get message from jda request queue.
     var messages = requestQueueAwsSqsClient.receiveMessage(
       ReceiveMessageRequest.builder()
@@ -244,6 +245,20 @@ class JdaResourceIntegrationTest(
     assertEquals(correlationId, jdaResponse.correlationId)
     assertEquals(promptKey, jdaResponse.prompt.key)
     assertEquals(version, jdaResponse.prompt.version)
+    Thread.sleep(Duration.ofSeconds(15))
+
+    webTestClient.post().uri("/v1/dequeueresponse")
+      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_REQUESTS")))
+      .header("Content-Type", "application/json")
+      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+      .accept(MediaType.APPLICATION_JSON)
+      .bodyValue(JdaDequeReceipt(jdaResponse.receiptId!!))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody(object : ParameterizedTypeReference<Void>() {})
+      .consumeWith(System.out::println)
+      .returnResult()
+      .responseBody
 
     // Verify no message in jda response queue after call to endpoint /v1/dequeueresponse.
     messages = responseQueueAwsSqsClient.receiveMessage(

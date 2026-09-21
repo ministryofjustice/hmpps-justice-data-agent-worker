@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service
 import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest
 import tools.jackson.databind.ObjectMapper
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaDequeReceipt
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.MetaData
@@ -45,6 +46,7 @@ class JdaWorkerServiceImpl(
   private val jdaMessagePublisher: JdaMessagePublisher,
   @param:Value("\${hmpps.sqs.queues.jdarequestqueues.queuename}") private val requestQueueName: String,
   @param:Value("\${hmpps.sqs.queues.jdarequestqueues.dlqName}") private val requestDlqName: String,
+  @param:Value("\${hmpps.sqs.message.visibility.timeout}") private val visibilityTimeOut: Int,
 ) : JdaWorkerService {
 
   @Autowired
@@ -117,6 +119,7 @@ class JdaWorkerServiceImpl(
       jdaRequest.correlationId,
       jdaRequest.prompt,
       uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.SUCCEEDED,
+      null,
       objectMapper.readTree(response as String),
       MetaData(
         RequestType.SYNC,
@@ -191,6 +194,7 @@ class JdaWorkerServiceImpl(
       jdaRequest.correlationId,
       jdaRequest.prompt,
       uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.SUCCEEDED,
+      null,
       objectMapper.readTree(response as String),
       MetaData(
         RequestType.ASYNC,
@@ -231,26 +235,30 @@ class JdaWorkerServiceImpl(
 
   override suspend fun dequeueResponse(): JdaResponse {
     try {
-      logger.info("Dequeue jda response queue: $requestQueueName")
+      logger.info("Dequeue jda response queue")
       val responseQueue = hmppsQueueService
         .findByQueueId("jdaresponsequeues")
       val sqsClient = responseQueue?.sqsClient
       val queueUrl = responseQueue?.queueUrl
       val messages = sqsClient?.receiveMessage(
         ReceiveMessageRequest.builder()
+          .visibilityTimeout(visibilityTimeOut)
           .maxNumberOfMessages(1)
           .queueUrl(queueUrl)
           .build(),
       )?.join()
       if (messages?.hasMessages() == true) {
         val jdaResponse = objectMapper.readValue(messages.messages()[0]?.body(), JdaResponse::class.java)
-        logger.info("Deleting message from the jda response queue: $requestQueueName with correlation id: ${jdaResponse.correlationId}")
+        jdaResponse.receiptId =  messages.messages()[0]?.receiptHandle()
+        /*logger.info("Deleting message from the jda response queue: $requestQueueName with correlation id: ${jdaResponse.correlationId}")
+        val x = messages.messages()[0]?.receiptHandle()
+        logger.info("recipt handle  = $x")
         sqsClient.deleteMessage(
           DeleteMessageRequest.builder()
             .queueUrl(queueUrl)
-            .receiptHandle(messages.messages()[0]?.receiptHandle())
+            .receiptHandle(x)
             .build(),
-        )
+        )*/
         logger.info("returning dequeued jda response with correlation id: ${jdaResponse.correlationId}")
         return jdaResponse
       }
@@ -334,6 +342,26 @@ class JdaWorkerServiceImpl(
       requestHistory?.errorMessage = e.message
       if (requestHistory != null) requestHistoryService.saveRequestHistory(requestHistory)
       throw LiteLlmException("Error occurred while processing llm response: ${e.message}")
+    }
+  }
+
+  override suspend fun deleteMessageFromResponseQueue(receipt: JdaDequeReceipt) {
+    try {
+      logger.info("Deleting message from response queue: ")
+      val responseQueue = hmppsQueueService
+        .findByQueueId("jdaresponsequeues")
+      val sqsClient = responseQueue?.sqsClient
+      val queueUrl = responseQueue?.queueUrl
+      sqsClient?.deleteMessage(
+          DeleteMessageRequest.builder()
+            .queueUrl(queueUrl)
+            .receiptHandle(receipt.receiptId)
+            .build(),
+      )
+    } catch (e: Exception) {
+      val message = "Error deleting message with receipt id: ${receipt.receiptId}, exception: ${e.message}"
+      logger.error(message)
+      throw SqsQueueException(message)
     }
   }
 }

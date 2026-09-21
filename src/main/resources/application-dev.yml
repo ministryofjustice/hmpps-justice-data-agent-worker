@@ -9,6 +9,9 @@ hmpps:
       model:
         prefix: bedrock-dpr-development
     sqs:
+      message:
+        visibility:
+          timeout: 300
       enabled: true
       queues:
         jdarequestqueues:
