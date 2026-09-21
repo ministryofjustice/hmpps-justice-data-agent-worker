@@ -1,6 +1,7 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.service
 
 import org.springframework.ai.chat.prompt.Prompt
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaDequeReceipt
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaResponse
 
@@ -14,4 +15,6 @@ interface JdaWorkerService {
   suspend fun submitAsynchronousRequest(jdaRequest: JdaRequest)
 
   suspend fun dequeueResponse(): JdaResponse
+
+  suspend fun deleteMessageFromResponseQueue(receipt: JdaDequeReceipt)
 }

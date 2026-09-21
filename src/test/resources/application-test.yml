@@ -51,6 +51,9 @@ logging:
 
 hmpps:
   sqs:
+    message:
+      visibility:
+        timeout: 20
     enabled: true
     provider: localstack
     localstackUrl: http://localhost:4566

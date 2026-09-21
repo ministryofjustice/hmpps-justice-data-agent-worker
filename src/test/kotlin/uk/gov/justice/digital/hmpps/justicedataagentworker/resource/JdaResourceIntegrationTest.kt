@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest
 import tools.jackson.databind.ObjectMapper
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaDequeReceipt
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.Prompt
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptRequest
@@ -198,7 +199,79 @@ class JdaResourceIntegrationTest(
   }
 
   @Test
-  fun `submit queue request and  get dequeue response`() {
+  fun `submit queue request, get dequeue response and delete message using receipt id`() {
+    // Get message from jda request queue.
+    var messages = requestQueueAwsSqsClient.receiveMessage(
+      ReceiveMessageRequest.builder()
+        .maxNumberOfMessages(1)
+        .queueUrl(requestQueueUrl)
+        .build(),
+    )?.join()
+    // Verify jd request queue is empty.
+    assertEquals(0, messages?.messages()?.size)
+
+    // send jda request to endpoint /v1/queuerequest
+
+    val correlationId = UUID.randomUUID()
+    val promptKey = promptKey
+    webTestClient.post().uri("/v1/queuerequest")
+      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_REQUESTS")))
+      .header("Content-Type", "application/json")
+      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+      .bodyValue(
+        DataGenerator.buildJdaRequest(correlationId, promptKey, version),
+      )
+      .accept(MediaType.APPLICATION_JSON)
+      .exchange()
+      .expectStatus().isAccepted
+
+    Thread.sleep(Duration.ofSeconds(15))
+
+    // Send request to dequeue message for jda response queue.
+    val jdaResponse = webTestClient.get().uri("/v1/dequeueresponse")
+      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_REQUESTS")))
+      .header("Content-Type", "application/json")
+      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+      .accept(MediaType.APPLICATION_JSON)
+      .exchange()
+      .expectStatus().isOk
+      .expectHeader().contentType(MediaType.APPLICATION_JSON_VALUE)
+      .expectBody(object : ParameterizedTypeReference<JdaResponse>() {})
+      .consumeWith(System.out::println)
+      .returnResult()
+      .responseBody as JdaResponse
+
+    // Assert message added in jda request queue after api call to endpoint v1/queuerequest
+    assertEquals(correlationId, jdaResponse.correlationId)
+    assertEquals(promptKey, jdaResponse.prompt.key)
+    assertEquals(version, jdaResponse.prompt.version)
+    Thread.sleep(Duration.ofSeconds(15))
+
+    webTestClient.post().uri("/v1/dequeueresponse")
+      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_REQUESTS")))
+      .header("Content-Type", "application/json")
+      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+      .accept(MediaType.APPLICATION_JSON)
+      .bodyValue(JdaDequeReceipt(jdaResponse.receiptId!!))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody(object : ParameterizedTypeReference<Void>() {})
+      .consumeWith(System.out::println)
+      .returnResult()
+      .responseBody
+
+    // Verify no message in jda response queue after call to endpoint DELETE /v1/dequeueresponse.
+    messages = responseQueueAwsSqsClient.receiveMessage(
+      ReceiveMessageRequest.builder()
+        .maxNumberOfMessages(1)
+        .queueUrl(responseQueueUrl)
+        .build(),
+    )?.join()
+    assertEquals(0, messages?.messages()?.size)
+  }
+
+  @Test
+  fun `submit queue request, get dequeue response and verify message added in queue after visibility timeout`() {
     // Get message from jda request queue.
     var messages = requestQueueAwsSqsClient.receiveMessage(
       ReceiveMessageRequest.builder()
@@ -245,13 +318,29 @@ class JdaResourceIntegrationTest(
     assertEquals(promptKey, jdaResponse.prompt.key)
     assertEquals(version, jdaResponse.prompt.version)
 
-    // Verify no message in jda response queue after call to endpoint /v1/dequeueresponse.
+    Thread.sleep(Duration.ofSeconds(25))
+
+    // Verify  message added in jda response queue after visibility timeout .
     messages = responseQueueAwsSqsClient.receiveMessage(
       ReceiveMessageRequest.builder()
         .maxNumberOfMessages(1)
         .queueUrl(responseQueueUrl)
         .build(),
     )?.join()
-    assertEquals(0, messages?.messages()?.size)
+    assertEquals(1, messages?.messages()?.size)
+
+    // delete message in queue otherwise it will cause  test 'Wait for empty queue' in IntegrationTestBase class to fail.
+    webTestClient.post().uri("/v1/dequeueresponse")
+      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_REQUESTS")))
+      .header("Content-Type", "application/json")
+      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+      .accept(MediaType.APPLICATION_JSON)
+      .bodyValue(JdaDequeReceipt(jdaResponse.receiptId!!))
+      .exchange()
+      .expectStatus().isOk
+      .expectBody(object : ParameterizedTypeReference<Void>() {})
+      .consumeWith(System.out::println)
+      .returnResult()
+      .responseBody
   }
 }

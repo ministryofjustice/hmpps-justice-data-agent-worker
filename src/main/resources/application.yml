@@ -94,15 +94,21 @@ management:
       cache:
         time-to-live: 2000ms
 hmpps:
-  #sqs:
-  #queues:
-  #domaineventsqueue:
-  #queueName: ${HMPPS_SQS_QUEUES_DOMAINEVENTSQUEUE_QUEUE_NAME}
-  #dlqName: ${HMPPS_SQS_QUEUES_DOMAINEVENTSQUEUE_DLQ_NAME}
   ai-gateway:
     api-key: ${AI_GATEWAY_API_KEY}
     base-url: ${AI_GATEWAY_BASE_URL}
-  #GATEWAY_API_KEY: ${GATEWAY_API_KEY}
+  sqs:
+    message:
+      visibility:
+        timeout: 300
+    enabled: true
+    queues:
+      jdarequestqueues:
+        queuename: ${HMPPS_JDA_REQUEST_QUEUE_NAME}
+        dlqName: ${HMPPS_JDA_REQUEST_DLQ_NAME}
+      jdaresponsequeues:
+        queuename: ${HMPPS_JDA_RESPONSE_QUEUE_NAME}
+        dlqName: ${HMPPS_JDA_RESPONSE_DLQ_NAME}
   auth:
     base-url: https://sign-in-dev.hmpps.service.justice.gov.uk/auth
 

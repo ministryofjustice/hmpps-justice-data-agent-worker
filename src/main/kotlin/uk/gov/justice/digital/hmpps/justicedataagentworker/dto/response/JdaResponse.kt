@@ -8,6 +8,7 @@ data class JdaResponse(
   val correlationId: UUID,
   val prompt: Prompt,
   val status: Status,
+  var receiptId: String?,
   val responseData: Any,
   val metaData: MetaData,
 )

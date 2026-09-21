@@ -8,15 +8,6 @@ hmpps:
     ai-gateway:
       model:
         prefix: bedrock-dpr-development
-    sqs:
-      enabled: true
-      queues:
-        jdarequestqueues:
-          queuename: ${HMPPS_JDA_REQUEST_QUEUE_NAME}
-          dlqName: ${HMPPS_JDA_REQUEST_DLQ_NAME}
-        jdaresponsequeues:
-          queuename: ${HMPPS_JDA_RESPONSE_QUEUE_NAME}
-          dlqName: ${HMPPS_JDA_RESPONSE_DLQ_NAME}
   #sqs:
    #queues:
      #domaineventsqueue:
