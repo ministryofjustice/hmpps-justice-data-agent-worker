@@ -260,7 +260,7 @@ class JdaResourceIntegrationTest(
       .returnResult()
       .responseBody
 
-    // Verify no message in jda response queue after call to endpoint /v1/dequeueresponse.
+    // Verify no message in jda response queue after call to endpoint DELETE /v1/dequeueresponse.
     messages = responseQueueAwsSqsClient.receiveMessage(
       ReceiveMessageRequest.builder()
         .maxNumberOfMessages(1)
