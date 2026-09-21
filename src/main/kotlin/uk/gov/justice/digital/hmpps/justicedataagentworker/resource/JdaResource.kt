@@ -11,7 +11,6 @@ import org.springframework.http.MediaType.APPLICATION_JSON_VALUE
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.web.bind.annotation.GetMapping
-import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -27,7 +26,7 @@ import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
 class JdaResource(private val jdaWorkerService: JdaWorkerService) {
 
   // This endpoint is for test purpose only for developer
-  @Tag(name = "Jda requests")
+  @Tag(name = "Synchronous")
   @Operation(
     summary = "Synchronous request to jda worker.",
     description = "This api endpoint is for sending synchronous request  to jda worker.  Requires role ROLE_JUSTICE_DATA_AGENT_REQUESTS",
@@ -55,7 +54,7 @@ class JdaResource(private val jdaWorkerService: JdaWorkerService) {
     return ResponseEntity.status(HttpStatus.OK).body(jdaResponse)
   }
 
-  @Tag(name = "Jda requests")
+  @Tag(name = "Asynchronous")
   @Operation(
     summary = "Asynchronous request to jda worker.",
     description = "This api endpoint is for sending asynchronous request  to jda worker.  Requires role ROLE_JUSTICE_DATA_AGENT_REQUESTS",
@@ -81,10 +80,10 @@ class JdaResource(private val jdaWorkerService: JdaWorkerService) {
     return ResponseEntity.status(HttpStatus.ACCEPTED).build()
   }
 
-  @Tag(name = "Jda requests")
+  @Tag(name = "Asynchronous")
   @Operation(
-    summary = "Asynchronous request to jda worker.",
-    description = "This api endpoint is for sending asynchronous request  to jda worker.  Requires role ROLE_JUSTICE_DATA_AGENT_REQUESTS",
+    summary = "Get jda response message from queue.",
+    description = "This api endpoint is for getting jda response message from queue.  Requires role ROLE_JUSTICE_DATA_AGENT_REQUESTS",
     security = [SecurityRequirement(name = "JUSTICE_DATA_AGENT_REQUESTS")],
     responses = [
       ApiResponse(responseCode = "200", description = "Successful response from LLM"),
@@ -107,7 +106,7 @@ class JdaResource(private val jdaWorkerService: JdaWorkerService) {
     return ResponseEntity.status(HttpStatus.OK).body(jdaResponse)
   }
 
-  @Tag(name = "Jda requests")
+  @Tag(name = "Asynchronous")
   @Operation(
     summary = "Request to delete message from JDA response queue",
     description = "This api endpoint is for deleting message from queue. Requires role ROLE_JUSTICE_DATA_AGENT_REQUESTS",

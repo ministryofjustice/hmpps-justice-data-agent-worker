@@ -249,16 +249,7 @@ class JdaWorkerServiceImpl(
       )?.join()
       if (messages?.hasMessages() == true) {
         val jdaResponse = objectMapper.readValue(messages.messages()[0]?.body(), JdaResponse::class.java)
-        jdaResponse.receiptId =  messages.messages()[0]?.receiptHandle()
-        /*logger.info("Deleting message from the jda response queue: $requestQueueName with correlation id: ${jdaResponse.correlationId}")
-        val x = messages.messages()[0]?.receiptHandle()
-        logger.info("recipt handle  = $x")
-        sqsClient.deleteMessage(
-          DeleteMessageRequest.builder()
-            .queueUrl(queueUrl)
-            .receiptHandle(x)
-            .build(),
-        )*/
+        jdaResponse.receiptId = messages.messages()[0]?.receiptHandle()
         logger.info("returning dequeued jda response with correlation id: ${jdaResponse.correlationId}")
         return jdaResponse
       }
@@ -353,10 +344,10 @@ class JdaWorkerServiceImpl(
       val sqsClient = responseQueue?.sqsClient
       val queueUrl = responseQueue?.queueUrl
       sqsClient?.deleteMessage(
-          DeleteMessageRequest.builder()
-            .queueUrl(queueUrl)
-            .receiptHandle(receipt.receiptId)
-            .build(),
+        DeleteMessageRequest.builder()
+          .queueUrl(queueUrl)
+          .receiptHandle(receipt.receiptId)
+          .build(),
       )
     } catch (e: Exception) {
       val message = "Error deleting message with receipt id: ${receipt.receiptId}, exception: ${e.message}"
