@@ -25,6 +25,8 @@ data class PromptVersion(
   val responseContract: Json? = null,
   val createdBy: UUID,
   val createdDate: LocalDateTime,
+  val lastModifiedBy: String,
+  val lastModifiedAt: LocalDateTime,
   @Transient
   @Value("false")
   @JsonIgnore

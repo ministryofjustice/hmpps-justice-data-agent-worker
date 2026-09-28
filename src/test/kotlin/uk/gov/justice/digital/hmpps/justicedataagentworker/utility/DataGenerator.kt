@@ -113,17 +113,23 @@ class DataGenerator {
       LocalDateTime.now(ZoneOffset.UTC),
     )
 
-    fun buildPromptVersion(promptId: UUID, requestJsonSchema: String, responseJsonSchema: String): PromptVersion = PromptVersion(
-      Generators.timeBasedEpochGenerator().generate(),
-      1,
-      promptId,
-      "Test-Model-x1",
-      "Inline instruction  FOR LLM",
-      Json.of(requestJsonSchema),
-      Json.of(responseJsonSchema),
-      UUID.randomUUID(),
-      LocalDateTime.now(ZoneOffset.UTC),
-    )
+    fun buildPromptVersion(promptId: UUID, requestJsonSchema: String, responseJsonSchema: String): PromptVersion {
+      val time = LocalDateTime.now(ZoneOffset.UTC)
+      val createdBy = UUID.randomUUID()
+      return PromptVersion(
+        Generators.timeBasedEpochGenerator().generate(),
+        1,
+        promptId,
+        "Test-Model-x1",
+        "Inline instruction  FOR LLM",
+        Json.of(requestJsonSchema),
+        Json.of(responseJsonSchema),
+        UUID.randomUUID(),
+        time,
+        createdBy.toString(),
+        time,
+      )
+    }
 
     fun buildLlmResponse() = """
       {
