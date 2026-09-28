@@ -9,6 +9,8 @@ data class PromptVersionResponse(
   val version: Int,
   val llmModel: String,
   val promptTemplate: String,
+  val batchSize: Int,
+  val batchArrayName: String,
   val requestContract: JsonNode,
   val responseContract: JsonNode? = null,
   val createdBy: UUID,

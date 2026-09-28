@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component
 import tools.jackson.databind.ObjectMapper
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaResponse
+import uk.gov.justice.digital.hmpps.justicedataagentworker.service.JdaBatchProcesser
 import uk.gov.justice.hmpps.sqs.HmppsQueueService
 
 @Component

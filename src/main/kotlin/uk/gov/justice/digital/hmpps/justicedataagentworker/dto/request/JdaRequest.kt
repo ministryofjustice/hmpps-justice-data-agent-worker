@@ -5,7 +5,7 @@ import java.util.UUID
 data class JdaRequest(
   val correlationId: UUID,
   val prompt: Prompt,
-  val requestData: Any,
+  var requestData: Any,
 )
 
 data class Prompt(
