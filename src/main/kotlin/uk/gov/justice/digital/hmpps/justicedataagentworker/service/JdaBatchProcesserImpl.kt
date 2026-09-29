@@ -12,8 +12,12 @@ class JdaBatchProcesserImpl(
   private val objectMapper: ObjectMapper,
 ) : JdaBatchProcesser {
 
-  override suspend fun processJdaRequest(jdaRequest: JdaRequest, batchSize: Int): List<JdaRequest> {
+  override suspend fun processJdaRequest(jdaRequest: JdaRequest, batchSize: Int?): List<JdaRequest> {
     val jdaRequests = mutableListOf<JdaRequest>()
+    if (batchSize == null || batchSize == 0) {
+      jdaRequests.add(jdaRequest)
+      return jdaRequests
+    }
     val data = Json.pretty(jdaRequest.requestData)
     val jsonNode = objectMapper.readTree(data)
     if (jsonNode.isArray) {
