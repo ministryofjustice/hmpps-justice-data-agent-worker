@@ -18,12 +18,10 @@ class JdaBatchProcesserTest(@Autowired private val jdaBatchProcesser: JdaBatchPr
 
   @BeforeEach
   fun setUp() {
-    // TODO("Not yet implemented")
   }
 
   @AfterEach
   fun tearDown() {
-    // TODO("Not yet implemented")
   }
 
   @Test
