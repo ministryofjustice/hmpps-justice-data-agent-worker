@@ -58,6 +58,8 @@ class PromptResourceIntegrationTest : IntegrationTestBase() {
           PromptVersionRequest(
             "TEST-MODEL-5",
             "Get json output of firstname and lastname.",
+            5,
+            "test batch array",
             mapper.readTree(DataGenerator.jsonRequestSchema),
             mapper.readTree(DataGenerator.jsonResponseSchema),
           ),
@@ -97,6 +99,8 @@ class PromptResourceIntegrationTest : IntegrationTestBase() {
           PromptVersionRequest(
             "TEST-MODEL-5",
             "Get json output of firstname and lastname.",
+            1,
+            "test batch array",
             mapper.readTree(DataGenerator.jsonRequestSchema),
             mapper.readTree(DataGenerator.jsonResponseSchema),
           ),
@@ -133,6 +137,8 @@ class PromptResourceIntegrationTest : IntegrationTestBase() {
           PromptVersionRequest(
             "TEST-MODEL-5",
             "Get json output of firstname and lastname.",
+            5,
+            "test batch array",
             mapper.readTree(DataGenerator.jsonRequestSchema),
             mapper.readTree(DataGenerator.jsonResponseSchema),
           ),

@@ -17,6 +17,8 @@ import org.springframework.stereotype.Service
 import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest
 import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.node.ArrayNode
+import tools.jackson.databind.node.JsonNodeFactory
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaDequeReceipt
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaResponse
@@ -44,6 +46,7 @@ class JdaWorkerServiceImpl(
   private val requestHistoryService: RequestHistoryService,
   private val objectMapper: ObjectMapper,
   private val jdaMessagePublisher: JdaMessagePublisher,
+  private val jdaBatchProcesser: JdaBatchProcesser,
   @param:Value("\${hmpps.sqs.queues.jdarequestqueues.queuename}") private val requestQueueName: String,
   @param:Value("\${hmpps.sqs.queues.jdarequestqueues.dlqName}") private val requestDlqName: String,
   @param:Value("\${hmpps.sqs.message.visibility.timeout}") private val visibilityTimeOut: Int,
@@ -152,21 +155,34 @@ class JdaWorkerServiceImpl(
     )
     var inputJson = jdaRequest.requestData
     inputJson = Json.pretty(inputJson)
+    val jdaRequests = jdaBatchProcesser.processJdaRequest(jdaRequest, promptVersionResponse.promptVersion.batchSize)
+    var llmResponses = JsonNodeFactory.instance.arrayNode()
     coroutineScope {
       launch {
         requestHistoryService.saveRequestHistory(requestHistory)
       }
       launch {
         try {
-          llmResponse = sendRequestToLlm(
-            convertMessageToPrompt(
-              promptVersionResponse.promptVersion.promptTemplate,
-              inputJson,
-            ),
-            promptVersionResponse.promptVersion.llmModel,
-            false,
-            requestHistory,
-          )
+          jdaRequests.forEach { request ->
+            llmResponse = sendRequestToLlm(
+              convertMessageToPrompt(
+                promptVersionResponse.promptVersion.promptTemplate,
+                Json.pretty(request.requestData),
+              ),
+              promptVersionResponse.promptVersion.llmModel,
+              false,
+              requestHistory,
+            )
+            val response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory)
+            if (promptVersionResponse.promptVersion.responseContract?.isNull == false) {
+              validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response as String, requestHistory)
+            }
+            val jsonNode = objectMapper.readTree(response as String)
+            if (jsonNode.isArray) {
+              val values = jsonNode as ArrayNode
+              llmResponses.addAll(values)
+            }
+          }
         } catch (e: Exception) {
           val awsSqsClient = hmppsQueueService
             .findByQueueId("jdarequestqueues")!!.sqsClient
@@ -181,10 +197,6 @@ class JdaWorkerServiceImpl(
         }
       }
     }
-    val response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory)
-    if (promptVersionResponse.promptVersion.responseContract?.isNull == false) {
-      validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response as String, requestHistory)
-    }
     requestHistory.new = false
     requestHistory.status = Status.SUCCEEDED
     requestHistory.completedAt = LocalDateTime.now(ZoneOffset.UTC)
@@ -195,7 +207,7 @@ class JdaWorkerServiceImpl(
       jdaRequest.prompt,
       uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.SUCCEEDED,
       null,
-      objectMapper.readTree(response as String),
+      llmResponses,
       MetaData(
         RequestType.ASYNC,
         requestHistory.receivedAt,

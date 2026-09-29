@@ -119,6 +119,8 @@ class DataGenerator {
       promptId,
       "Test-Model-x1",
       "Inline instruction  FOR LLM",
+      5,
+      "test batch array",
       Json.of(requestJsonSchema),
       Json.of(responseJsonSchema),
       UUID.randomUUID(),

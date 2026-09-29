@@ -19,9 +19,9 @@ data class PromptVersion(
   val promptId: UUID,
   val llmModel: String,
   val promptTemplate: String,
-
+  val batchSize: Int,
+  val batchArrayName: String,
   val requestContract: Json,
-
   val responseContract: Json? = null,
   val createdBy: UUID,
   val createdDate: LocalDateTime,

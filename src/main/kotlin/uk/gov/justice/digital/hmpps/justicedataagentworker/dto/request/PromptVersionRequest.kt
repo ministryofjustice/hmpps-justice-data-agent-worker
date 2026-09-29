@@ -5,6 +5,8 @@ import tools.jackson.databind.JsonNode
 data class PromptVersionRequest(
   val llmModel: String,
   val promptTemplate: String,
+  val batchSize: Int,
+  val batchArrayName: String,
   val requestContract: JsonNode,
   val responseContract: JsonNode? = null,
 )
