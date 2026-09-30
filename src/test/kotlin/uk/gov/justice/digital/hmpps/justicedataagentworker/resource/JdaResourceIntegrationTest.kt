@@ -107,7 +107,7 @@ class JdaResourceIntegrationTest(
   }
 
   @Test
-  fun `submit synchronous request to tests unexpected llm response failing response contract validation`() {
+  fun `submit synchronous request with unexpected llm response fails validation'`() {
     val key = UUID.randomUUID().toString()
     webTestClient.post().uri("/v1/prompts")
       .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
