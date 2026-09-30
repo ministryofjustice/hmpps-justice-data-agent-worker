@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.resource
 
+import com.openai.models.beta.responses.BetaResponseOutputItem.McpCall.Status
 import io.awspring.cloud.sqs.operations.SqsTemplate
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -103,6 +104,56 @@ class JdaResourceIntegrationTest(
       .consumeWith(System.out::println)
       .returnResult()
       .responseBody as JdaResponse
+  }
+
+  @Test
+  fun `submit synchronous request with unexpected llm response fails validation'`() {
+    val key = UUID.randomUUID().toString()
+    webTestClient.post().uri("/v1/prompts")
+      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
+      .header("Content-Type", "application/json")
+      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+      .bodyValue(
+        PromptRequest(
+          key,
+          "NEW AI SERVICE",
+          createdBy,
+          PromptVersionRequest(
+            llmModel = "TEST-MODEL-5",
+            promptTemplate = "Get json output of firstname and lastname.",
+            batchSize = 1,
+            batchArrayName = "test",
+            requestContract = mapper.readTree(DataGenerator.jsonRequestSchema),
+            responseContract = mapper.readTree(DataGenerator.jsonResponseSchema),
+          ),
+        ),
+      )
+      .accept(MediaType.APPLICATION_JSON)
+      .exchange()
+      .expectStatus().isCreated
+      .expectHeader().contentType(MediaType.APPLICATION_JSON_VALUE)
+      .expectBody(object : ParameterizedTypeReference<PromptResponse>() {})
+      .consumeWith(System.out::println)
+      .returnResult()
+      .responseBody as PromptResponse
+
+    val response = webTestClient.post().uri("/v1/submitrequest")
+      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_REQUESTS")))
+      .header("Content-Type", "application/json")
+      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+      .bodyValue(
+        DataGenerator.buildJdaRequest(UUID.randomUUID(), key, 1),
+      )
+      .accept(MediaType.APPLICATION_JSON)
+      .exchange()
+      .expectStatus().isOk
+      .expectHeader().contentType(MediaType.APPLICATION_JSON_VALUE)
+      .expectBody(object : ParameterizedTypeReference<JdaResponse>() {})
+      .consumeWith(System.out::println)
+      .returnResult()
+      .responseBody as JdaResponse
+
+    assertEquals(uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.FAILED, response.status)
   }
 
   @Test
