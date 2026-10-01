@@ -24,10 +24,11 @@ class JdaBatchProcesserImpl(
       val arrayNode = jsonNode as ArrayNode
       val list = arrayNode.elements().chunked(batchSize)
       list.forEach { x ->
+        val requestData = objectMapper.readValue(objectMapper.writeValueAsString(x), Any::class.java)
         val req = JdaRequest(
           jdaRequest.correlationId,
           jdaRequest.prompt,
-          x,
+          requestData = requestData,
         )
         jdaRequests.add(req)
       }
