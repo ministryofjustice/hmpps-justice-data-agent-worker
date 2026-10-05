@@ -19,6 +19,8 @@ generic-service:
     sqs-jda-response-queue-secret:
       HMPPS_JDA_RESPONSE_QUEUE_NAME: "sqs_queue_name"
       HMPPS_JDA_RESPONSE_DLQ_NAME: "sqs_dlq_name"
+    rds-postgresql-read-replica-output:
+      DB_READ_ENDPOINT: "rds_instance_endpoint"
 
 # CloudPlatform AlertManager receiver to route prometheus alerts to slack
 # See https://user-guide.cloud-platform.service.justice.gov.uk/documentation/monitoring-an-app/how-to-create-alarms.html#creating-your-own-custom-alerts
