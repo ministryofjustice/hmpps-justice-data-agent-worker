@@ -12,7 +12,12 @@ class OpenAiClient(
   private val chatClient: ChatClient,
 ) {
   suspend fun getOpenAiChatResponse(prompt: Prompt, model: String): Any = chatClient.prompt(prompt)
-    .options(OpenAiChatOptions.builder().model("$modelPrefix-$model").store(false))
+    .options(
+      OpenAiChatOptions.builder()
+        .model("$modelPrefix-$model")
+        .temperature(0.00)
+        .store(false),
+    )
     .call()
     .chatClientResponse()
 }
