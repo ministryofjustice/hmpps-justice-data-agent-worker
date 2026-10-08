@@ -101,7 +101,7 @@ hmpps:
     message:
       visibility:
         timeout: 300
-    enabled: fasle
+    enabled: true
     queues:
       jdarequestqueues:
         queuename: ${HMPPS_JDA_REQUEST_QUEUE_NAME}
