@@ -157,10 +157,9 @@ class PromptServiceImpl(
     createdBy: UUID,
     version: Int,
     promptVersionRequest: PromptVersionRequest,
-  ): PromptVersion
-  {
+  ): PromptVersion {
     val time = LocalDateTime.now(ZoneOffset.UTC)
-    return  PromptVersion(
+    return PromptVersion(
       Generators.timeBasedEpochGenerator().generate(),
       version,
       promptId,
@@ -170,10 +169,10 @@ class PromptServiceImpl(
       promptVersionRequest.batchArrayName,
       Json.of(mapper.writeValueAsString(promptVersionRequest.requestContract)),
       promptVersionRequest.responseContract?.let { Json.of(mapper.writeValueAsString(it)) },
-     createdBy,
-     time,
-     createdBy.toString(),
-     time,
+      createdBy,
+      time,
+      createdBy.toString(),
+      time,
     )
   }
 
