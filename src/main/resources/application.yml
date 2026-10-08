@@ -110,7 +110,7 @@ hmpps:
         queuename: ${HMPPS_JDA_RESPONSE_QUEUE_NAME}
         dlqName: ${HMPPS_JDA_RESPONSE_DLQ_NAME}
   auth:
-    base-url: https://sign-in-dev.hmpps.service.justice.gov.uk/auth
+    base-url: ${HMPPS_AUTH_URL}
 
 springdoc:
   api-docs:

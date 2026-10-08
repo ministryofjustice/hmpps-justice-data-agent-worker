@@ -112,7 +112,8 @@ class DataGenerator {
       createdBy,
       LocalDateTime.now(ZoneOffset.UTC),
     )
-
+    val time = LocalDateTime.now(ZoneOffset.UTC)
+    val id = UUID.randomUUID()
     fun buildPromptVersion(promptId: UUID, requestJsonSchema: String, responseJsonSchema: String): PromptVersion = PromptVersion(
       Generators.timeBasedEpochGenerator().generate(),
       1,
@@ -123,8 +124,10 @@ class DataGenerator {
       "test batch array",
       Json.of(requestJsonSchema),
       Json.of(responseJsonSchema),
-      UUID.randomUUID(),
-      LocalDateTime.now(ZoneOffset.UTC),
+      id,
+      time,
+      id.toString(),
+      time,
     )
 
     fun buildLlmResponse() = """

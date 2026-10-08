@@ -50,6 +50,8 @@ logging:
       migration: DEBUG
 
 hmpps:
+  auth:
+    base-url: http://localhost:8090
   sqs:
     message:
       visibility:
