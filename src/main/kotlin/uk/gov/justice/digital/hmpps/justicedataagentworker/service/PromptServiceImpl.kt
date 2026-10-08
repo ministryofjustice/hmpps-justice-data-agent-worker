@@ -157,20 +157,23 @@ class PromptServiceImpl(
     createdBy: UUID,
     version: Int,
     promptVersionRequest: PromptVersionRequest,
-  ): PromptVersion {
+  ): PromptVersion
+  {
     val time = LocalDateTime.now(ZoneOffset.UTC)
-    return PromptVersion(
+    return  PromptVersion(
       Generators.timeBasedEpochGenerator().generate(),
       version,
       promptId,
       promptVersionRequest.llmModel,
       promptVersionRequest.promptTemplate,
+      promptVersionRequest.batchSize,
+      promptVersionRequest.batchArrayName,
       Json.of(mapper.writeValueAsString(promptVersionRequest.requestContract)),
       promptVersionRequest.responseContract?.let { Json.of(mapper.writeValueAsString(it)) },
-      createdBy,
-      time,
-      createdBy.toString(),
-      time,
+     createdBy,
+     time,
+     createdBy.toString(),
+     time,
     )
   }
 
@@ -186,6 +189,8 @@ class PromptServiceImpl(
       promptVersion.version,
       promptVersion.llmModel,
       promptVersion.promptTemplate,
+      promptVersion.batchSize,
+      promptVersion.batchArrayName,
       mapper.readTree(promptVersion.requestContract.asString()),
       promptVersion.responseContract?.let { mapper.readTree(it.asString()) },
       promptVersion.createdBy,
@@ -202,6 +207,8 @@ class PromptServiceImpl(
           promptVersion.version,
           promptVersion.llmModel,
           promptVersion.promptTemplate,
+          promptVersion.batchSize,
+          promptVersion.batchArrayName,
           mapper.readTree(promptVersion.requestContract.asString()),
           promptVersion.responseContract?.let { mapper.readTree(it.asString()) },
           promptVersion.createdBy,

@@ -8,6 +8,7 @@ import java.time.LocalDateTime
 @JsonInclude(Include.NON_NULL)
 data class MetaData(
   val requestType: RequestType,
+  var receiptId: String?,
   @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'")
   val submittedAt: LocalDateTime?,
   @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss'Z'")

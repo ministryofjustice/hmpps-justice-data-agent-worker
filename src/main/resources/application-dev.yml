@@ -5,15 +5,9 @@ spring:
     locations: classpath:db/migration/dev
 
 hmpps:
-    sqs:
-      enabled: true
-      queues:
-        jdarequestqueues:
-          queuename: ${HMPPS_JDA_REQUEST_QUEUE_NAME}
-          dlqName: ${HMPPS_JDA_REQUEST_DLQ_NAME}
-        jdaresponsequeues:
-          queuename: ${HMPPS_JDA_RESPONSE_QUEUE_NAME}
-          dlqName: ${HMPPS_JDA_RESPONSE_DLQ_NAME}
+    ai-gateway:
+      model:
+        prefix: bedrock-dpr-development
   #sqs:
    #queues:
      #domaineventsqueue:

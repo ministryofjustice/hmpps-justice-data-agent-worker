@@ -2,7 +2,6 @@ package uk.gov.justice.digital.hmpps.justicedataagentworker.service
 
 import com.fasterxml.uuid.Generators
 import com.openai.models.chat.completions.ChatCompletion
-import io.awspring.cloud.sqs.operations.SqsTemplate
 import io.swagger.v3.core.util.Json
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
@@ -17,10 +16,15 @@ import org.springframework.stereotype.Service
 import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest
 import tools.jackson.databind.ObjectMapper
+import tools.jackson.databind.node.ArrayNode
+import tools.jackson.databind.node.JsonNodeFactory
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaDequeReceipt
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaRequest
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Error
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.MetaData
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.RequestType
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Stage
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.JdaValidationException
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.LiteLlmException
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.NotFoundException
@@ -43,8 +47,10 @@ class JdaWorkerServiceImpl(
   private val requestHistoryService: RequestHistoryService,
   private val objectMapper: ObjectMapper,
   private val jdaMessagePublisher: JdaMessagePublisher,
+  private val jdaBatchProcesser: JdaBatchProcesser,
   @param:Value("\${hmpps.sqs.queues.jdarequestqueues.queuename}") private val requestQueueName: String,
   @param:Value("\${hmpps.sqs.queues.jdarequestqueues.dlqName}") private val requestDlqName: String,
+  @param:Value("\${hmpps.sqs.message.visibility.timeout}") private val visibilityTimeOut: Int,
 ) : JdaWorkerService {
 
   @Autowired
@@ -88,38 +94,77 @@ class JdaWorkerServiceImpl(
     var inputJson = jdaRequest.requestData
     inputJson = Json.pretty(inputJson)
     validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.requestContract), inputJson, requestHistory)
+    var error: Error? = null
+    var response: String? = null
+    var status: uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status? = null
+    var historyStatus: Status? = null
+    var dataResponse: Any? = null
     coroutineScope {
       launch {
         requestHistoryService.saveRequestHistory(requestHistory)
       }
       launch {
-        llmResponse = sendRequestToLlm(
-          convertMessageToPrompt(
-            promptVersionResponse.promptVersion.promptTemplate,
-            inputJson,
-          ),
-          promptVersionResponse.promptVersion.llmModel,
-          false,
-          requestHistory,
-        )
+        try {
+          llmResponse = sendRequestToLlm(
+            convertMessageToPrompt(
+              promptVersionResponse.promptVersion.promptTemplate,
+              inputJson,
+            ),
+            promptVersionResponse.promptVersion.llmModel,
+            false,
+            requestHistory,
+          )
+          response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory) as String
+          if ((promptVersionResponse.promptVersion.responseContract?.isNull) == false) {
+            validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response as String, requestHistory)
+          }
+        } catch (e: LiteLlmException) {
+          error = Error(
+            code = "LLM_REFUSED_REQUEST",
+            message = e.message!!,
+            stage = Stage.GATEWAY,
+          )
+          logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
+        } catch (e: JdaValidationException) {
+          error = Error(
+            code = "RESPONSE_CONTRACT_VALIDATION_FAILED",
+            message = e.message!!,
+            stage = Stage.VALIDATION,
+          )
+          logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
+        } catch (e: Exception) {
+          error = Error(
+            code = "LLM_REFUSED_REQUEST",
+            message = e.message!!,
+            stage = Stage.INTERNAL,
+          )
+          logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
+        }
       }
     }
-    val response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory)
-    if ((promptVersionResponse.promptVersion.responseContract?.isNull) == false) {
-      validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response as String, requestHistory)
+    if (error != null) {
+      status = uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.FAILED
+      historyStatus = Status.FAILED
+      dataResponse = error
+    } else {
+      status = uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.SUCCEEDED
+      historyStatus = Status.SUCCEEDED
+      dataResponse = objectMapper.readTree(response as String)
     }
     requestHistory.new = false
-    requestHistory.status = Status.SUCCEEDED
+    requestHistory.status = historyStatus
     requestHistory.completedAt = LocalDateTime.now(ZoneOffset.UTC)
     requestHistoryService.saveRequestHistory(requestHistory)
     return JdaResponse(
       requestHistory.id,
       jdaRequest.correlationId,
       jdaRequest.prompt,
-      uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.SUCCEEDED,
-      objectMapper.readTree(response as String),
+      status,
+      null,
+      dataResponse,
       MetaData(
         RequestType.SYNC,
+        null,
         requestHistory.receivedAt,
         requestHistory.queuedAt,
         requestHistory.receivedAt,
@@ -149,41 +194,74 @@ class JdaWorkerServiceImpl(
     )
     var inputJson = jdaRequest.requestData
     inputJson = Json.pretty(inputJson)
+    val jdaRequests = jdaBatchProcesser.processJdaRequest(jdaRequest, promptVersionResponse.promptVersion.batchSize)
+    var llmResponses = JsonNodeFactory.instance.arrayNode()
+    var error: Error? = null
+    var response: String? = null
+    var status: uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status? = null
+    var historyStatus: Status? = null
+    var dataResponse: Any? = null
     coroutineScope {
       launch {
         requestHistoryService.saveRequestHistory(requestHistory)
       }
       launch {
         try {
-          llmResponse = sendRequestToLlm(
-            convertMessageToPrompt(
-              promptVersionResponse.promptVersion.promptTemplate,
-              inputJson,
-            ),
-            promptVersionResponse.promptVersion.llmModel,
-            false,
-            requestHistory,
+          jdaRequests.forEach { request ->
+            llmResponse = sendRequestToLlm(
+              convertMessageToPrompt(
+                promptVersionResponse.promptVersion.promptTemplate,
+                Json.pretty(request.requestData),
+              ),
+              promptVersionResponse.promptVersion.llmModel,
+              false,
+              requestHistory,
+            )
+            val response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory)
+            if (promptVersionResponse.promptVersion.responseContract?.isNull == false) {
+              validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response as String, requestHistory)
+            }
+            val jsonNode = objectMapper.readTree(response as String)
+            if (jsonNode.isArray) {
+              val values = jsonNode as ArrayNode
+              llmResponses.addAll(values)
+            }
+          }
+        } catch (e: LiteLlmException) {
+          error = Error(
+            code = "LLM_REFUSED_REQUEST",
+            message = e.message!!,
+            stage = Stage.GATEWAY,
           )
-        } catch (e: Exception) {
-          val awsSqsClient = hmppsQueueService
-            .findByQueueId("jdarequestqueues")!!.sqsClient
-          val sqsTemplate =
-            SqsTemplate
-              .newTemplate(
-                awsSqsClient,
-              )
           logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
-          sqsTemplate.send { to -> to.queue(requestDlqName).payload(jdaRequest) }
-          logger.info("Jda request message with correlation id: ${jdaRequest.correlationId} sent to dlq name: $requestDlqName")
+        } catch (e: JdaValidationException) {
+          error = Error(
+            code = "RESPONSE_CONTRACT_VALIDATION_FAILED",
+            message = e.message!!,
+            stage = Stage.VALIDATION,
+          )
+          logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
+        } catch (e: Exception) {
+          error = Error(
+            code = "LLM_REFUSED_REQUEST",
+            message = e.message!!,
+            stage = Stage.INTERNAL,
+          )
+          logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
         }
       }
     }
-    val response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory)
-    if (promptVersionResponse.promptVersion.responseContract?.isNull == false) {
-      validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response as String, requestHistory)
+    if (error != null) {
+      status = uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.FAILED
+      historyStatus = Status.FAILED
+      dataResponse = error
+    } else {
+      status = uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.SUCCEEDED
+      historyStatus = Status.SUCCEEDED
+      dataResponse = llmResponses
     }
     requestHistory.new = false
-    requestHistory.status = Status.SUCCEEDED
+    requestHistory.status = historyStatus
     requestHistory.completedAt = LocalDateTime.now(ZoneOffset.UTC)
     requestHistoryService.saveRequestHistory(requestHistory)
     val jdaResponse = JdaResponse(
@@ -191,9 +269,11 @@ class JdaWorkerServiceImpl(
       jdaRequest.correlationId,
       jdaRequest.prompt,
       uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.SUCCEEDED,
-      objectMapper.readTree(response as String),
+      null,
+      dataResponse,
       MetaData(
         RequestType.ASYNC,
+        null,
         requestHistory.receivedAt,
         requestHistory.queuedAt,
         requestHistory.receivedAt,
@@ -231,26 +311,22 @@ class JdaWorkerServiceImpl(
 
   override suspend fun dequeueResponse(): JdaResponse {
     try {
-      logger.info("Dequeue jda response queue: $requestQueueName")
+      logger.info("Dequeue jda response queue")
       val responseQueue = hmppsQueueService
         .findByQueueId("jdaresponsequeues")
       val sqsClient = responseQueue?.sqsClient
       val queueUrl = responseQueue?.queueUrl
       val messages = sqsClient?.receiveMessage(
         ReceiveMessageRequest.builder()
+          .visibilityTimeout(visibilityTimeOut)
           .maxNumberOfMessages(1)
           .queueUrl(queueUrl)
           .build(),
       )?.join()
       if (messages?.hasMessages() == true) {
         val jdaResponse = objectMapper.readValue(messages.messages()[0]?.body(), JdaResponse::class.java)
-        logger.info("Deleting message from the jda response queue: $requestQueueName with correlation id: ${jdaResponse.correlationId}")
-        sqsClient.deleteMessage(
-          DeleteMessageRequest.builder()
-            .queueUrl(queueUrl)
-            .receiptHandle(messages.messages()[0]?.receiptHandle())
-            .build(),
-        )
+        jdaResponse.receiptId = messages.messages()[0]?.receiptHandle()
+        jdaResponse.metaData.receiptId = jdaResponse.receiptId
         logger.info("returning dequeued jda response with correlation id: ${jdaResponse.correlationId}")
         return jdaResponse
       }
@@ -334,6 +410,26 @@ class JdaWorkerServiceImpl(
       requestHistory?.errorMessage = e.message
       if (requestHistory != null) requestHistoryService.saveRequestHistory(requestHistory)
       throw LiteLlmException("Error occurred while processing llm response: ${e.message}")
+    }
+  }
+
+  override suspend fun deleteMessageFromResponseQueue(receipt: JdaDequeReceipt) {
+    try {
+      logger.info("Deleting message from response queue: ")
+      val responseQueue = hmppsQueueService
+        .findByQueueId("jdaresponsequeues")
+      val sqsClient = responseQueue?.sqsClient
+      val queueUrl = responseQueue?.queueUrl
+      sqsClient?.deleteMessage(
+        DeleteMessageRequest.builder()
+          .queueUrl(queueUrl)
+          .receiptHandle(receipt.receiptId)
+          .build(),
+      )
+    } catch (e: Exception) {
+      val message = "Error deleting message with receipt id: ${receipt.receiptId}, exception: ${e.message}"
+      logger.error(message)
+      throw SqsQueueException(message)
     }
   }
 }
