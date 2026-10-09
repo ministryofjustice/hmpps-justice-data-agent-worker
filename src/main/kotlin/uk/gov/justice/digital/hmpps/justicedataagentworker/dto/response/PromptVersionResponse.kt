@@ -13,6 +13,6 @@ data class PromptVersionResponse(
   val batchArrayName: String,
   val requestContract: JsonNode,
   val responseContract: JsonNode? = null,
-  val createdBy: UUID,
+  val createdBy: String,
   val createdDate: LocalDateTime,
 )

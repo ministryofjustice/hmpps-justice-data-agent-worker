@@ -8,7 +8,7 @@ data class PromptsResponse(
   val promptKey: String,
   val description: String,
   val isDeleted: Boolean,
-  val createdBy: UUID,
+  val createdBy: String,
   val createdDate: LocalDateTime,
   val promptVersions: List<PromptVersionResponse>,
 )
