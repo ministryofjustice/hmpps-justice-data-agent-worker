@@ -34,7 +34,7 @@ class PromptResourceIntegrationTest : IntegrationTestBase() {
   @Autowired
   private lateinit var mapper: ObjectMapper
   private val promptKey = UUID.randomUUID().toString()
-  private val createdBy = UUID.randomUUID()
+  private val createdBy = UUID.randomUUID().toString()
 
   @BeforeEach
   fun setup() {

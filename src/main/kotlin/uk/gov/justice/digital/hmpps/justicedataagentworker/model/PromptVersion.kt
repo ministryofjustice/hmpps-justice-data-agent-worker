@@ -23,7 +23,7 @@ data class PromptVersion(
   val batchArrayName: String,
   val requestContract: Json,
   val responseContract: Json? = null,
-  val createdBy: UUID,
+  val createdBy: String,
   val createdDate: LocalDateTime,
   val lastModifiedBy: String,
   val lastModifiedAt: LocalDateTime,

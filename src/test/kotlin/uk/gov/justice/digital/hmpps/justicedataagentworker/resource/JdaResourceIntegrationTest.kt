@@ -1,6 +1,5 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.resource
 
-import com.openai.models.beta.responses.BetaResponseOutputItem.McpCall.Status
 import io.awspring.cloud.sqs.operations.SqsTemplate
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -44,7 +43,7 @@ class JdaResourceIntegrationTest(
   @Autowired
   private lateinit var mapper: ObjectMapper
   private val promptKey = UUID.randomUUID().toString()
-  private val createdBy = UUID.randomUUID()
+  private val createdBy = UUID.randomUUID().toString()
   private val correlationId = UUID.randomUUID()
   private val version = 1
 

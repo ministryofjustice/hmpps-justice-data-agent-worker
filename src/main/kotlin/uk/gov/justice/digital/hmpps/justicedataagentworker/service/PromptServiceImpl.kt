@@ -154,7 +154,7 @@ class PromptServiceImpl(
 
   fun convertPromptVersionRequestToEntity(
     promptId: UUID,
-    createdBy: UUID,
+    createdBy: String,
     version: Int,
     promptVersionRequest: PromptVersionRequest,
   ): PromptVersion {
@@ -171,7 +171,7 @@ class PromptServiceImpl(
       promptVersionRequest.responseContract?.let { Json.of(mapper.writeValueAsString(it)) },
       createdBy,
       time,
-      createdBy.toString(),
+      createdBy,
       time,
     )
   }
