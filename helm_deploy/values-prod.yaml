@@ -22,7 +22,6 @@ generic-service:
   postgresDatabaseRestore:
     jobName: jda-prod-to-preprod-restore
     enabled: true
-    # 02:00 UTC on the 1st and 15th of each month. Cron cannot express every 14 days.
     schedule: "0 2 1,15 * *"
     timeout: 900
     namespace_secrets:
