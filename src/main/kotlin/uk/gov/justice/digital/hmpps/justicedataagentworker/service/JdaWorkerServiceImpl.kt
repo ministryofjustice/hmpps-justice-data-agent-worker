@@ -76,7 +76,12 @@ class JdaWorkerServiceImpl(
   }
 
   override suspend fun handleSynchronousRequest(jdaRequest: JdaRequest): JdaResponse {
-    val promptVersionResponse = promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version)
+    val promptVersionResponse = if (jdaRequest.prompt.version != null) {
+      promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version.toInt())
+    } else {
+      promptService.getPromptByKey(jdaRequest.prompt.key)
+    }
+    val version = promptVersionResponse.promptVersion.version
     val time = LocalDateTime.now(ZoneOffset.UTC)
     var llmResponse: Any? = null
     val requestHistory = RequestHistory(
@@ -158,7 +163,7 @@ class JdaWorkerServiceImpl(
     return JdaResponse(
       requestHistory.id,
       jdaRequest.correlationId,
-      jdaRequest.prompt,
+      uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.Prompt(jdaRequest.prompt.key, version.toLong()),
       status,
       null,
       dataResponse,
@@ -177,7 +182,12 @@ class JdaWorkerServiceImpl(
 
   override suspend fun handleAsynchronousRequest(jdaRequest: JdaRequest) {
     logger.info("Async request received for correlation id: ${jdaRequest.correlationId} to sent to Llm")
-    val promptVersionResponse = promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version)
+    val promptVersionResponse = if (jdaRequest.prompt.version != null) {
+      promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version.toInt())
+    } else {
+      promptService.getPromptByKey(jdaRequest.prompt.key)
+    }
+    val version = promptVersionResponse.promptVersion.version
     val time = LocalDateTime.now(ZoneOffset.UTC)
     var llmResponse: Any? = null
     val requestHistory = RequestHistory(
@@ -267,7 +277,7 @@ class JdaWorkerServiceImpl(
     val jdaResponse = JdaResponse(
       requestHistory.id,
       jdaRequest.correlationId,
-      jdaRequest.prompt,
+      uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.Prompt(jdaRequest.prompt.key, version.toLong()),
       uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.SUCCEEDED,
       null,
       dataResponse,
@@ -287,7 +297,12 @@ class JdaWorkerServiceImpl(
 
   override suspend fun submitAsynchronousRequest(jdaRequest: JdaRequest) {
     logger.info("Async jda request received to submit to request queue for correlation id: ${jdaRequest.correlationId} to sent to Llm")
-    val promptVersionResponse = promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version)
+    val promptVersionResponse = if (jdaRequest.prompt.version != null) {
+      promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version.toInt())
+    } else {
+      promptService.getPromptByKey(jdaRequest.prompt.key)
+    }
+    val version = promptVersionResponse.promptVersion.version
     var inputJson = jdaRequest.requestData
     inputJson = Json.pretty(inputJson)
     validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.requestContract), inputJson, null)
