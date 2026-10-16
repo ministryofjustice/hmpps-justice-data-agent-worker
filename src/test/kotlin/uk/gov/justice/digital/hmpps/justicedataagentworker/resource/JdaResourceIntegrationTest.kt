@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.justicedataagentworker.resource
 
 import io.awspring.cloud.sqs.operations.SqsTemplate
 import kotlinx.coroutines.runBlocking
+import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -45,7 +46,7 @@ class JdaResourceIntegrationTest(
   private val promptKey = UUID.randomUUID().toString()
   private val createdBy = UUID.randomUUID().toString()
   private val correlationId = UUID.randomUUID()
-  private val version = 1
+  private val version = 1L
 
   @BeforeEach
   fun setup() {
@@ -86,6 +87,14 @@ class JdaResourceIntegrationTest(
       .responseBody as PromptResponse
   }
 
+  @AfterEach
+  fun teardown() {
+    runBlocking {
+      promptVersionRepository.deleteAll()
+      promptRepository.deleteAll()
+    }
+  }
+
   @Test
   fun `submit synchronous request`() {
     webTestClient.post().uri("/v1/submitrequest")
@@ -103,6 +112,57 @@ class JdaResourceIntegrationTest(
       .consumeWith(System.out::println)
       .returnResult()
       .responseBody as JdaResponse
+  }
+
+  @Test
+  fun `submit synchronous request without version`() {
+    val promptResponse = webTestClient.put().uri("/v1/prompts/$promptKey")
+      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_PROMPTS")))
+      .header("Content-Type", "application/json")
+      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+      .bodyValue(
+        PromptRequest(
+          promptKey,
+          "AI SERVICE",
+          createdBy,
+          PromptVersionRequest(
+            llmModel = "TEST-MODEL-5",
+            promptTemplate = "Get json output of firstname and lastname.",
+            batchSize = 1,
+            batchArrayName = "test",
+            requestContract = mapper.readTree(DataGenerator.jsonRequestSchema),
+            // null//mapper.readTree(DataGenerator.jsonResponseSchema),
+          ),
+        ),
+      )
+      .accept(MediaType.APPLICATION_JSON)
+      .exchange()
+      .expectStatus().isOk
+      .expectHeader().contentType(MediaType.APPLICATION_JSON_VALUE)
+      .expectBody(object : ParameterizedTypeReference<PromptResponse>() {})
+      .consumeWith(System.out::println)
+      .returnResult()
+      .responseBody as PromptResponse
+
+    assertEquals(2, promptResponse.promptVersion.version)
+
+    val jdaResponse = webTestClient.post().uri("/v1/submitrequest")
+      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_REQUESTS")))
+      .header("Content-Type", "application/json")
+      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+      .bodyValue(
+        DataGenerator.buildJdaRequest(UUID.randomUUID(), promptKey, null),
+      )
+      .accept(MediaType.APPLICATION_JSON)
+      .exchange()
+      .expectStatus().isOk
+      .expectHeader().contentType(MediaType.APPLICATION_JSON_VALUE)
+      .expectBody(object : ParameterizedTypeReference<JdaResponse>() {})
+      .consumeWith(System.out::println)
+      .returnResult()
+      .responseBody as JdaResponse
+
+    assertEquals(2, jdaResponse.prompt.version)
   }
 
   @Test
@@ -228,7 +288,7 @@ class JdaResourceIntegrationTest(
   fun `submit async queue request to request queue and publish llm response to response queue`() {
     val correlationId = UUID.randomUUID()
     val promptKey = promptKey
-    val version = 1
+    val version = 1L
     val jdaRequest = DataGenerator.buildJdaRequest(correlationId, promptKey, version)
     val sqsTemplate =
       SqsTemplate

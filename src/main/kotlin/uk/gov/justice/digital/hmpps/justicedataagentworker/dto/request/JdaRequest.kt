@@ -10,5 +10,5 @@ data class JdaRequest(
 
 data class Prompt(
   val key: String,
-  val version: Int,
+  val version: Long? = null,
 )

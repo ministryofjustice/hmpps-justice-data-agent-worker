@@ -165,7 +165,7 @@ class DataGenerator {
       }
     """.trimIndent()
 
-    fun buildJdaRequest(correlationId: UUID, promptKey: String, version: Int): JdaRequest = JdaRequest(
+    fun buildJdaRequest(correlationId: UUID, promptKey: String, version: Long?): JdaRequest = JdaRequest(
       correlationId,
       uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.Prompt(promptKey, version),
       ObjectMapper().readTree(
