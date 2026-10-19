@@ -22,6 +22,9 @@ data class RequestHistory(
   var status: Status,
   var errorMessage: String? = null,
   var errorAt: LocalDateTime? = null,
+  var promptTokens: Int? = null,
+  var completionTokens: Int? = null,
+  var totalTokens: Int? = null,
   @Transient
   @Value("false")
   @JsonIgnore
