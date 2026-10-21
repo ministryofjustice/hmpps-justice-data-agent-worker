@@ -6,7 +6,6 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertNotNull
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.ParameterizedTypeReference
@@ -124,8 +123,9 @@ class JdaResourceIntegrationTest(
     }
     assertEquals(5, requestHistory?.totalInputItems)
     assertEquals(1, requestHistory?.totalOutputItems)
-    assertNotNull(requestHistory?.totalInputItems)
-    assertNotNull(requestHistory.totalOutputItems)
+    assertEquals(27, requestHistory?.promptTokens)
+    assertEquals(436, requestHistory?.completionTokens)
+    assertEquals(463, requestHistory?.totalTokens)
   }
 
   @Test
@@ -454,8 +454,9 @@ class JdaResourceIntegrationTest(
     }
     assertEquals(5, requestHistory?.totalInputItems)
     assertEquals(5, requestHistory?.totalOutputItems)
-    assertNotNull(requestHistory?.totalInputItems)
-    assertNotNull(requestHistory.totalOutputItems)
+    assertEquals(135, requestHistory?.promptTokens)
+    assertEquals(2180, requestHistory?.completionTokens)
+    assertEquals(2315, requestHistory?.totalTokens)
 
     Thread.sleep(Duration.ofSeconds(25))
 

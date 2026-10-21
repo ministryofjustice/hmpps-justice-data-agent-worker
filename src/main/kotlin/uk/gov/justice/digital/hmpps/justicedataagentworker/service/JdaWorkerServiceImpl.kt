@@ -167,7 +167,7 @@ class JdaWorkerServiceImpl(
     requestHistory.status = historyStatus
     requestHistory.completedAt = LocalDateTime.now(ZoneOffset.UTC)
     requestHistory.promptTokens = response!!.promptTokens
-    requestHistory.completionTokens = response!!.promptTokens
+    requestHistory.completionTokens = response!!.completionTokens
     requestHistory.totalTokens = response!!.totalTokens
     requestHistory.totalOutputItems = totalOutputItems
     requestHistoryService.saveRequestHistory(requestHistory)
