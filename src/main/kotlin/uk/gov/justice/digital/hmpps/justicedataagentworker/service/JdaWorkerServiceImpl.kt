@@ -84,6 +84,7 @@ class JdaWorkerServiceImpl(
     val version = promptVersionResponse.promptVersion.version
     val time = LocalDateTime.now(ZoneOffset.UTC)
     var llmResponse: Any? = null
+    val totalInputItems = jdaBatchProcesser.getJsonArraySize(jdaRequest.requestData)
     val requestHistory = RequestHistory(
       id = Generators.timeBasedEpochGenerator().generate(),
       synchronousRequest = true,
@@ -98,6 +99,8 @@ class JdaWorkerServiceImpl(
       promptTokens = null,
       completionTokens = null,
       totalTokens = null,
+      totalInputItems = totalInputItems,
+      totalOutputItems = null,
     )
     var inputJson = jdaRequest.requestData
     inputJson = Json.pretty(inputJson)
@@ -159,12 +162,14 @@ class JdaWorkerServiceImpl(
       historyStatus = Status.SUCCEEDED
       dataResponse = objectMapper.readTree(response!!.response)
     }
+    val totalOutputItems = jdaBatchProcesser.getJsonArraySize(dataResponse as Any)
     requestHistory.new = false
     requestHistory.status = historyStatus
     requestHistory.completedAt = LocalDateTime.now(ZoneOffset.UTC)
     requestHistory.promptTokens = response!!.promptTokens
     requestHistory.completionTokens = response!!.promptTokens
     requestHistory.totalTokens = response!!.totalTokens
+    requestHistory.totalOutputItems = totalOutputItems
     requestHistoryService.saveRequestHistory(requestHistory)
     return JdaResponse(
       requestHistory.id,
@@ -198,19 +203,29 @@ class JdaWorkerServiceImpl(
     }
     val version = promptVersionResponse.promptVersion.version
     val time = LocalDateTime.now(ZoneOffset.UTC)
-    var llmResponse: Any? = null
-    val requestHistory = RequestHistory(
-      Generators.timeBasedEpochGenerator().generate(),
-      true,
-      jdaRequest.correlationId,
-      promptVersionResponse.id,
-      null,
-      time,
-      null,
-      Status.PROCESSING,
-      null,
-      null,
-    )
+    var llmResponse: Any?
+    val totalInputItems = jdaBatchProcesser.getJsonArraySize(jdaRequest.requestData)
+    var totalOutputItems: Int? = null
+    var requestHistory: RequestHistory?
+    if (jdaRequest.requestId != null) {
+      requestHistory = requestHistoryService.getRequestHistoryById(jdaRequest.requestId!!)
+      requestHistory.status = Status.PROCESSING
+      requestHistory.totalInputItems = totalInputItems
+      requestHistory.new = false
+    } else {
+      requestHistory = RequestHistory(
+        id = Generators.timeBasedEpochGenerator().generate(),
+        synchronousRequest = false,
+        correlationId = jdaRequest.correlationId,
+        promptVersionId = promptVersionResponse.id,
+        queuedAt = null,
+        receivedAt = time,
+        completedAt = null,
+        status = Status.PROCESSING,
+        errorMessage = null,
+        errorAt = null,
+      )
+    }
     var inputJson = jdaRequest.requestData
     inputJson = Json.pretty(inputJson)
     val jdaRequests = jdaBatchProcesser.processJdaRequest(jdaRequest, promptVersionResponse.promptVersion.batchSize)
@@ -255,6 +270,7 @@ class JdaWorkerServiceImpl(
               llmResponses.addAll(values)
             }
           }
+          totalOutputItems = llmResponses.size()
         } catch (e: LiteLlmException) {
           error = Error(
             code = "LLM_REFUSED_REQUEST",
@@ -294,6 +310,7 @@ class JdaWorkerServiceImpl(
     requestHistory.promptTokens = promptTokens
     requestHistory.completionTokens = completionTokens
     requestHistory.totalTokens = totalTokens
+    requestHistory.totalOutputItems = totalOutputItems
     requestHistoryService.saveRequestHistory(requestHistory)
     val jdaResponse = JdaResponse(
       requestHistory.id,
@@ -341,6 +358,7 @@ class JdaWorkerServiceImpl(
       null,
     )
     requestHistoryService.saveRequestHistory(requestHistory)
+    jdaRequest.requestId = requestHistory.id
     logger.info("Send async jda request to the jda request queue")
     jdaMessagePublisher.publishJdaRequest(jdaRequest)
   }

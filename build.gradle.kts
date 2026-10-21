@@ -1,7 +1,7 @@
 plugins {
-  id("uk.gov.justice.hmpps.gradle-spring-boot") version "11.0.10"
-  kotlin("plugin.spring") version "2.4.0"
-  kotlin("plugin.jpa") version "2.3.20"
+  id("uk.gov.justice.hmpps.gradle-spring-boot") version "11.0.12"
+  kotlin("plugin.spring") version "2.4.21"
+  kotlin("plugin.jpa") version "2.4.21"
 }
 
 extra["springAiVersion"] = "2.0.1"

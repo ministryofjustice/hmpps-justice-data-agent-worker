@@ -25,6 +25,8 @@ data class RequestHistory(
   var promptTokens: Int? = null,
   var completionTokens: Int? = null,
   var totalTokens: Int? = null,
+  var totalInputItems: Int? = null,
+  var totalOutputItems: Int? = null,
   @Transient
   @Value("false")
   @JsonIgnore
