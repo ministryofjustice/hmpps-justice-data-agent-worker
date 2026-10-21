@@ -75,7 +75,7 @@ class JdaWorkerServiceImpl(
     return response
   }
 
-  override suspend fun handleSynchronousRequest(jdaRequest: JdaRequest): JdaResponse {
+  override suspend fun processSynchronousJdaRequest(jdaRequest: JdaRequest): JdaResponse {
     val promptVersionResponse = if (jdaRequest.prompt.version != null) {
       promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version.toInt())
     } else {
@@ -191,7 +191,7 @@ class JdaWorkerServiceImpl(
     )
   }
 
-  override suspend fun handleAsynchronousRequest(jdaRequest: JdaRequest) {
+  override suspend fun processAsynchronousJdaRequest(jdaRequest: JdaRequest) {
     var promptTokens = 0
     var completionTokens = 0
     var totalTokens = 0
@@ -333,7 +333,7 @@ class JdaWorkerServiceImpl(
     jdaMessagePublisher.publishJdaResponse(jdaResponse)
   }
 
-  override suspend fun submitAsynchronousRequest(jdaRequest: JdaRequest) {
+  override suspend fun submitAsynchronousJdaRequestToQueue(jdaRequest: JdaRequest) {
     logger.info("Async jda request received to submit to request queue for correlation id: ${jdaRequest.correlationId} to sent to Llm")
     val promptVersionResponse = if (jdaRequest.prompt.version != null) {
       promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version.toInt())
