@@ -4,5 +4,7 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaReques
 
 interface JdaBatchProcesser {
 
+  suspend fun getJsonArraySize(data: Any): Int?
+
   suspend fun processJdaRequest(jdaRequest: JdaRequest, batchSize: Int?): List<JdaRequest>
 }

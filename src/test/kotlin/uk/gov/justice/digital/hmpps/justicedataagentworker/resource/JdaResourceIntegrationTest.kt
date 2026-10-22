@@ -21,8 +21,10 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptVer
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.integration.IntegrationTestBase
+import uk.gov.justice.digital.hmpps.justicedataagentworker.model.RequestHistory
 import uk.gov.justice.digital.hmpps.justicedataagentworker.repository.PromptRepository
 import uk.gov.justice.digital.hmpps.justicedataagentworker.repository.PromptVersionRepository
+import uk.gov.justice.digital.hmpps.justicedataagentworker.repository.RequestHistoryRepository
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.event.JdaMessagePublisherImpl.Companion.logger
 import uk.gov.justice.digital.hmpps.justicedataagentworker.utility.DataGenerator
 import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
@@ -40,6 +42,9 @@ class JdaResourceIntegrationTest(
 
   @Autowired
   private lateinit var promptVersionRepository: PromptVersionRepository
+
+  @Autowired
+  private lateinit var requestHistoryRepository: RequestHistoryRepository
 
   @Autowired
   private lateinit var mapper: ObjectMapper
@@ -97,7 +102,8 @@ class JdaResourceIntegrationTest(
 
   @Test
   fun `submit synchronous request`() {
-    webTestClient.post().uri("/v1/submitrequest")
+    var requestHistory: RequestHistory?
+    val response = webTestClient.post().uri("/v1/submitrequest")
       .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_REQUESTS")))
       .header("Content-Type", "application/json")
       .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
@@ -112,6 +118,14 @@ class JdaResourceIntegrationTest(
       .consumeWith(System.out::println)
       .returnResult()
       .responseBody as JdaResponse
+    runBlocking {
+      requestHistory = requestHistoryRepository.findById(response.requestId)
+    }
+    assertEquals(5, requestHistory?.totalInputItems)
+    assertEquals(1, requestHistory?.totalOutputItems)
+    assertEquals(27, requestHistory?.promptTokens)
+    assertEquals(436, requestHistory?.completionTokens)
+    assertEquals(463, requestHistory?.totalTokens)
   }
 
   @Test
@@ -293,7 +307,7 @@ class JdaResourceIntegrationTest(
     val sqsTemplate =
       SqsTemplate
         .newTemplate(requestQueueAwsSqsClient)
-    logger.info("Sending jda response message to response queue: $jdaRequestQueueName")
+    logger.info("Sending jda request message to request queue: $jdaRequestQueueName")
     sqsTemplate.send { to -> to.queue(jdaRequestQueueName).payload(jdaRequest) }
 
     Thread.sleep(Duration.ofSeconds(15))
@@ -303,11 +317,11 @@ class JdaResourceIntegrationTest(
         .queueUrl(responseQueueUrl)
         .build(),
     )?.join()
-    val jdaResponse = mapper.readValue(messages?.messages()[0]?.body(), JdaResponse::class.java)
+    val jdaRequestFromQueue = mapper.readValue(messages?.messages()[0]?.body(), JdaResponse::class.java)
     assertEquals(1, messages?.messages()?.size)
-    assertEquals(correlationId, jdaResponse.correlationId)
-    assertEquals(promptKey, jdaResponse.prompt.key)
-    assertEquals(version, jdaResponse.prompt.version)
+    assertEquals(correlationId, jdaRequestFromQueue.correlationId)
+    assertEquals(promptKey, jdaRequestFromQueue.prompt.key)
+    assertEquals(version, jdaRequestFromQueue.prompt.version)
   }
 
   @Test
@@ -384,6 +398,7 @@ class JdaResourceIntegrationTest(
 
   @Test
   fun `submit queue request, get dequeue response and verify message added in queue after visibility timeout`() {
+    var requestHistory: RequestHistory?
     // Get message from jda request queue.
     var messages = requestQueueAwsSqsClient.receiveMessage(
       ReceiveMessageRequest.builder()
@@ -408,6 +423,10 @@ class JdaResourceIntegrationTest(
       .accept(MediaType.APPLICATION_JSON)
       .exchange()
       .expectStatus().isAccepted
+      .expectBody(object : ParameterizedTypeReference<Void>() {})
+      .consumeWith(System.out::println)
+      .returnResult()
+      .responseBody
 
     Thread.sleep(Duration.ofSeconds(15))
 
@@ -429,6 +448,15 @@ class JdaResourceIntegrationTest(
     assertEquals(correlationId, jdaResponse.correlationId)
     assertEquals(promptKey, jdaResponse.prompt.key)
     assertEquals(version, jdaResponse.prompt.version)
+
+    runBlocking {
+      requestHistory = requestHistoryRepository.findById(jdaResponse.requestId)
+    }
+    assertEquals(5, requestHistory?.totalInputItems)
+    assertEquals(5, requestHistory?.totalOutputItems)
+    assertEquals(135, requestHistory?.promptTokens)
+    assertEquals(2180, requestHistory?.completionTokens)
+    assertEquals(2315, requestHistory?.totalTokens)
 
     Thread.sleep(Duration.ofSeconds(25))
 

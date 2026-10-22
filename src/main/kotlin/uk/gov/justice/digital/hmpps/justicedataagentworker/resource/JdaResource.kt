@@ -50,7 +50,7 @@ class JdaResource(private val jdaWorkerService: JdaWorkerService) {
   suspend fun analyze(
     @RequestBody jdaRequest: JdaRequest,
   ): ResponseEntity<JdaResponse> {
-    val jdaResponse = jdaWorkerService.handleSynchronousRequest(jdaRequest)
+    val jdaResponse = jdaWorkerService.processSynchronousJdaRequest(jdaRequest)
     return ResponseEntity.status(HttpStatus.OK).body(jdaResponse)
   }
 
@@ -76,7 +76,7 @@ class JdaResource(private val jdaWorkerService: JdaWorkerService) {
   @PostMapping("queuerequest")
   @PreAuthorize("hasAnyRole('JUSTICE_DATA_AGENT_REQUESTS')")
   suspend fun submitAsynchronousRequest(@RequestBody jdaRequest: JdaRequest): ResponseEntity<Void> {
-    jdaWorkerService.submitAsynchronousRequest(jdaRequest)
+    jdaWorkerService.submitAsynchronousJdaRequestToQueue(jdaRequest)
     return ResponseEntity.status(HttpStatus.ACCEPTED).build()
   }
 

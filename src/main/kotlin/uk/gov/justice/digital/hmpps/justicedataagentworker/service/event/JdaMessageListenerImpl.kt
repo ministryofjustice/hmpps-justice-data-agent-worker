@@ -21,7 +21,7 @@ class JdaMessageListenerImpl(
   override fun onJdaRequestMessageReceived(jdaRequest: JdaRequest) {
     logger.info("Sqs request queue listener, jda request message received for correlation id: ${jdaRequest?.correlationId}")
     runBlocking {
-      jdaWorkerService.handleAsynchronousRequest(jdaRequest)
+      jdaWorkerService.processAsynchronousJdaRequest(jdaRequest)
     }
   }
 }

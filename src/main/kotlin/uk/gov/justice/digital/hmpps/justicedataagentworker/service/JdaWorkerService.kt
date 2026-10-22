@@ -8,11 +8,11 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaRespo
 interface JdaWorkerService {
   suspend fun analyzeData(prompt: Prompt, model: String, jsonSchema: String?, useWebClient: Boolean): Any
 
-  suspend fun handleSynchronousRequest(jdaRequest: JdaRequest): JdaResponse
+  suspend fun processSynchronousJdaRequest(jdaRequest: JdaRequest): JdaResponse
 
-  suspend fun handleAsynchronousRequest(jdaRequest: JdaRequest)
+  suspend fun processAsynchronousJdaRequest(jdaRequest: JdaRequest)
 
-  suspend fun submitAsynchronousRequest(jdaRequest: JdaRequest)
+  suspend fun submitAsynchronousJdaRequestToQueue(jdaRequest: JdaRequest)
 
   suspend fun dequeueResponse(): JdaResponse
 

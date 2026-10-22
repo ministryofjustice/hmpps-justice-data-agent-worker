@@ -75,7 +75,7 @@ class JdaWorkerServiceImpl(
     return response
   }
 
-  override suspend fun handleSynchronousRequest(jdaRequest: JdaRequest): JdaResponse {
+  override suspend fun processSynchronousJdaRequest(jdaRequest: JdaRequest): JdaResponse {
     val promptVersionResponse = if (jdaRequest.prompt.version != null) {
       promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version.toInt())
     } else {
@@ -84,23 +84,29 @@ class JdaWorkerServiceImpl(
     val version = promptVersionResponse.promptVersion.version
     val time = LocalDateTime.now(ZoneOffset.UTC)
     var llmResponse: Any? = null
+    val totalInputItems = jdaBatchProcesser.getJsonArraySize(jdaRequest.requestData)
     val requestHistory = RequestHistory(
-      Generators.timeBasedEpochGenerator().generate(),
-      true,
-      jdaRequest.correlationId,
-      promptVersionResponse.id,
-      null,
-      time,
-      null,
-      Status.PROCESSING,
-      null,
-      null,
+      id = Generators.timeBasedEpochGenerator().generate(),
+      synchronousRequest = true,
+      correlationId = jdaRequest.correlationId,
+      promptVersionId = promptVersionResponse.id,
+      queuedAt = null,
+      receivedAt = time,
+      completedAt = null,
+      status = Status.PROCESSING,
+      errorMessage = null,
+      errorAt = null,
+      promptTokens = null,
+      completionTokens = null,
+      totalTokens = null,
+      totalInputItems = totalInputItems,
+      totalOutputItems = null,
     )
     var inputJson = jdaRequest.requestData
     inputJson = Json.pretty(inputJson)
     validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.requestContract), inputJson, requestHistory)
     var error: Error? = null
-    var response: String? = null
+    var response: LlmResponseData? = null
     var status: uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status? = null
     var historyStatus: Status? = null
     var dataResponse: Any? = null
@@ -119,7 +125,7 @@ class JdaWorkerServiceImpl(
             false,
             requestHistory,
           )
-          response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory) as String
+          response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory)
           if ((promptVersionResponse.promptVersion.responseContract?.isNull) == false) {
             validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response as String, requestHistory)
           }
@@ -154,11 +160,16 @@ class JdaWorkerServiceImpl(
     } else {
       status = uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.SUCCEEDED
       historyStatus = Status.SUCCEEDED
-      dataResponse = objectMapper.readTree(response as String)
+      dataResponse = objectMapper.readTree(response!!.response)
     }
+    val totalOutputItems = jdaBatchProcesser.getJsonArraySize(dataResponse as Any)
     requestHistory.new = false
     requestHistory.status = historyStatus
     requestHistory.completedAt = LocalDateTime.now(ZoneOffset.UTC)
+    requestHistory.promptTokens = response!!.promptTokens
+    requestHistory.completionTokens = response!!.completionTokens
+    requestHistory.totalTokens = response!!.totalTokens
+    requestHistory.totalOutputItems = totalOutputItems
     requestHistoryService.saveRequestHistory(requestHistory)
     return JdaResponse(
       requestHistory.id,
@@ -180,7 +191,10 @@ class JdaWorkerServiceImpl(
     )
   }
 
-  override suspend fun handleAsynchronousRequest(jdaRequest: JdaRequest) {
+  override suspend fun processAsynchronousJdaRequest(jdaRequest: JdaRequest) {
+    var promptTokens = 0
+    var completionTokens = 0
+    var totalTokens = 0
     logger.info("Async request received for correlation id: ${jdaRequest.correlationId} to sent to Llm")
     val promptVersionResponse = if (jdaRequest.prompt.version != null) {
       promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version.toInt())
@@ -189,19 +203,29 @@ class JdaWorkerServiceImpl(
     }
     val version = promptVersionResponse.promptVersion.version
     val time = LocalDateTime.now(ZoneOffset.UTC)
-    var llmResponse: Any? = null
-    val requestHistory = RequestHistory(
-      Generators.timeBasedEpochGenerator().generate(),
-      true,
-      jdaRequest.correlationId,
-      promptVersionResponse.id,
-      null,
-      time,
-      null,
-      Status.PROCESSING,
-      null,
-      null,
-    )
+    var llmResponse: Any?
+    val totalInputItems = jdaBatchProcesser.getJsonArraySize(jdaRequest.requestData)
+    var totalOutputItems: Int? = null
+    var requestHistory: RequestHistory?
+    if (jdaRequest.requestId != null) {
+      requestHistory = requestHistoryService.getRequestHistoryById(jdaRequest.requestId!!)
+      requestHistory.status = Status.PROCESSING
+      requestHistory.totalInputItems = totalInputItems
+      requestHistory.new = false
+    } else {
+      requestHistory = RequestHistory(
+        id = Generators.timeBasedEpochGenerator().generate(),
+        synchronousRequest = false,
+        correlationId = jdaRequest.correlationId,
+        promptVersionId = promptVersionResponse.id,
+        queuedAt = null,
+        receivedAt = time,
+        completedAt = null,
+        status = Status.PROCESSING,
+        errorMessage = null,
+        errorAt = null,
+      )
+    }
     var inputJson = jdaRequest.requestData
     inputJson = Json.pretty(inputJson)
     val jdaRequests = jdaBatchProcesser.processJdaRequest(jdaRequest, promptVersionResponse.promptVersion.batchSize)
@@ -228,15 +252,25 @@ class JdaWorkerServiceImpl(
               requestHistory,
             )
             val response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory)
+            if (response.promptTokens != null) {
+              promptTokens += response.promptTokens
+            }
+            if (response.completionTokens != null) {
+              completionTokens += response.completionTokens
+            }
+            if (response.totalTokens != null) {
+              totalTokens += response.totalTokens
+            }
             if (promptVersionResponse.promptVersion.responseContract?.isNull == false) {
               validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response as String, requestHistory)
             }
-            val jsonNode = objectMapper.readTree(response as String)
+            val jsonNode = objectMapper.readTree(response.response)
             if (jsonNode.isArray) {
               val values = jsonNode as ArrayNode
               llmResponses.addAll(values)
             }
           }
+          totalOutputItems = llmResponses.size()
         } catch (e: LiteLlmException) {
           error = Error(
             code = "LLM_REFUSED_REQUEST",
@@ -273,6 +307,10 @@ class JdaWorkerServiceImpl(
     requestHistory.new = false
     requestHistory.status = historyStatus
     requestHistory.completedAt = LocalDateTime.now(ZoneOffset.UTC)
+    requestHistory.promptTokens = promptTokens
+    requestHistory.completionTokens = completionTokens
+    requestHistory.totalTokens = totalTokens
+    requestHistory.totalOutputItems = totalOutputItems
     requestHistoryService.saveRequestHistory(requestHistory)
     val jdaResponse = JdaResponse(
       requestHistory.id,
@@ -295,7 +333,7 @@ class JdaWorkerServiceImpl(
     jdaMessagePublisher.publishJdaResponse(jdaResponse)
   }
 
-  override suspend fun submitAsynchronousRequest(jdaRequest: JdaRequest) {
+  override suspend fun submitAsynchronousJdaRequestToQueue(jdaRequest: JdaRequest) {
     logger.info("Async jda request received to submit to request queue for correlation id: ${jdaRequest.correlationId} to sent to Llm")
     val promptVersionResponse = if (jdaRequest.prompt.version != null) {
       promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version.toInt())
@@ -320,6 +358,7 @@ class JdaWorkerServiceImpl(
       null,
     )
     requestHistoryService.saveRequestHistory(requestHistory)
+    jdaRequest.requestId = requestHistory.id
     logger.info("Send async jda request to the jda request queue")
     jdaMessagePublisher.publishJdaRequest(jdaRequest)
   }
@@ -398,25 +437,35 @@ class JdaWorkerServiceImpl(
     }
   }
 
-  private suspend fun convertLlmResponseToApiResponse(llmResponse: Any, requestHistory: RequestHistory?): Any {
+  private suspend fun convertLlmResponseToApiResponse(llmResponse: Any, requestHistory: RequestHistory?): LlmResponseData {
     try {
       var response = llmResponse
+      var promptTokens: Int?
+      var completionTokens: Int?
+      var totalTokens: Int?
       if (response is ChatCompletion) {
         val message = response.choices().get(0) as Map<String, Any>
         val content = message["message"] as Map<String, Any>
+        promptTokens = response.usage().get().promptTokens().toInt()
+        completionTokens = response.usage().get().completionTokens().toInt()
+        totalTokens = response.usage().get().totalTokens().toInt()
         response = content["content"] as String
         response = response.replace("```json", "")
         response = response.replace("```", "")
         response = response.replace("\n", "")
       }
-
       if (response is ChatClientResponse) {
+        promptTokens = response.chatResponse!!.metadata.usage.promptTokens
+        completionTokens = response.chatResponse!!.metadata.usage.completionTokens
+        totalTokens = response.chatResponse!!.metadata.usage.totalTokens
         response = response.chatResponse!!.result!!.output.text!!
         response = response.replace("```json", "")
         response = response.replace("```", "")
         response = response.replace("\n", "")
+      } else {
+        throw IllegalArgumentException("Unknown format response from LLM")
       }
-      return response
+      return LlmResponseData(response, promptTokens, completionTokens, totalTokens)
     } catch (e: Exception) {
       logger.error("Error occurred while processing llm response: ${e.message}")
       requestHistory?.new = false
@@ -448,3 +497,10 @@ class JdaWorkerServiceImpl(
     }
   }
 }
+
+data class LlmResponseData(
+  val response: String,
+  val promptTokens: Int?,
+  val completionTokens: Int?,
+  val totalTokens: Int?,
+)

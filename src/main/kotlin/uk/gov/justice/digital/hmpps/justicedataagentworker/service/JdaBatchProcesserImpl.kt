@@ -2,6 +2,7 @@ package uk.gov.justice.digital.hmpps.justicedataagentworker.service
 
 import io.swagger.v3.core.util.Json
 import org.springframework.stereotype.Component
+import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
 import tools.jackson.databind.node.ArrayNode
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaRequest
@@ -36,5 +37,23 @@ class JdaBatchProcesserImpl(
       throw JdaValidationException("Request data is not array")
     }
     return jdaRequests
+  }
+
+  override suspend fun getJsonArraySize(data: Any): Int? {
+    var size: Int?
+    var jsonNode: JsonNode?
+    if (data is JsonNode) {
+      jsonNode = data
+    } else {
+      val jsonData = Json.pretty(data)
+      jsonNode = objectMapper.readTree(jsonData)
+    }
+    if (jsonNode.isArray) {
+      val arrayNode = jsonNode as ArrayNode
+      size = arrayNode.size()
+    } else {
+      size = null
+    }
+    return size
   }
 }
