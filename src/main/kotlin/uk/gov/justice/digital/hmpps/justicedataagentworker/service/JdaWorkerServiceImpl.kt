@@ -48,8 +48,6 @@ class JdaWorkerServiceImpl(
   private val objectMapper: ObjectMapper,
   private val jdaMessagePublisher: JdaMessagePublisher,
   private val jdaBatchProcesser: JdaBatchProcesser,
-  @param:Value("\${hmpps.sqs.queues.jdarequestqueues.queuename}") private val requestQueueName: String,
-  @param:Value("\${hmpps.sqs.queues.jdarequestqueues.dlqName}") private val requestDlqName: String,
   @param:Value("\${hmpps.sqs.message.visibility.timeout}") private val visibilityTimeOut: Int,
 ) : JdaWorkerService {
 
@@ -127,7 +125,7 @@ class JdaWorkerServiceImpl(
           )
           response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory)
           if ((promptVersionResponse.promptVersion.responseContract?.isNull) == false) {
-            validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response as String, requestHistory)
+            validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response.response, requestHistory)
           }
         } catch (e: LiteLlmException) {
           error = Error(
@@ -262,7 +260,7 @@ class JdaWorkerServiceImpl(
               totalTokens += response.totalTokens
             }
             if (promptVersionResponse.promptVersion.responseContract?.isNull == false) {
-              validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response as String, requestHistory)
+              validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response.response, requestHistory)
             }
             val jsonNode = objectMapper.readTree(response.response)
             if (jsonNode.isArray) {
@@ -347,7 +345,7 @@ class JdaWorkerServiceImpl(
     val time = LocalDateTime.now(ZoneOffset.UTC)
     val requestHistory = RequestHistory(
       Generators.timeBasedEpochGenerator().generate(),
-      true,
+      false,
       jdaRequest.correlationId,
       promptVersionResponse.id,
       null,
