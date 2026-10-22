@@ -41,22 +41,18 @@ class JdaBatchProcesserImpl(
 
   override suspend fun getJsonArraySize(data: Any): Int? {
     var size: Int?
+    var jsonNode: JsonNode?
     if (data is JsonNode) {
-      if (data.isArray) {
-        val arrayNode = data as ArrayNode
-        size = arrayNode.size()
-      } else {
-        size = null
-      }
+      jsonNode = data
     } else {
       val jsonData = Json.pretty(data)
-      val jsonNode = objectMapper.readTree(jsonData)
-      if (jsonNode.isArray) {
-        val arrayNode = jsonNode as ArrayNode
-        size = arrayNode.size()
-      } else {
-        size = null
-      }
+      jsonNode = objectMapper.readTree(jsonData)
+    }
+    if (jsonNode.isArray) {
+      val arrayNode = jsonNode as ArrayNode
+      size = arrayNode.size()
+    } else {
+      size = null
     }
     return size
   }
