@@ -26,7 +26,6 @@ dependencies {
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.10.2")
   implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:1.10.2")
-  implementation("org.hibernate.reactive:hibernate-reactive-core:4.5.5.Final")
   testImplementation("org.testcontainers:postgresql:1.21.4")
   testImplementation("org.testcontainers:r2dbc:1.21.4")
   testImplementation("org.springframework.boot:spring-boot-data-r2dbc-test")
