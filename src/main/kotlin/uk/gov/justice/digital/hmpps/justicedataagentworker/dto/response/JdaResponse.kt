@@ -14,7 +14,9 @@ data class JdaResponse(
   val status: Status,
   // Remove this when services update to get receipt if from metaData.
   var receiptId: String?,
-  @Schema(description = "The expected response data from LLM. Response can be data in an array or without array.", required = true,
+  @Schema(
+    description = "The expected response data from LLM. Response can be data in an array or without array.",
+    required = true,
     example = """
       [
       {
@@ -22,7 +24,8 @@ data class JdaResponse(
       "code": "+44"
       }
       ]
-    """)
+    """,
+  )
   val responseData: Any,
   val metaData: MetaData,
 )

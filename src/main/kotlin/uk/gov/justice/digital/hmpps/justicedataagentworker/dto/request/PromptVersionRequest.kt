@@ -12,7 +12,9 @@ data class PromptVersionRequest(
   val batchSize: Int,
   @Schema(description = "Name of array.", required = true, example = "service-AA-array-size")
   val batchArrayName: String,
-  @Schema(description = "Json schema for data sent to LLM", required = true,
+  @Schema(
+    description = "Json schema for data sent to LLM",
+    required = true,
     example = """
       {
   "${'$'}schema": "//w3schools.in/json-06/schema#",
@@ -36,9 +38,12 @@ data class PromptVersionRequest(
     "last_name"
   ]
 }
-    """)
+    """,
+  )
   val requestContract: JsonNode,
-  @Schema(description = "Json schema for data expected from LLM.", required = false,
+  @Schema(
+    description = "Json schema for data expected from LLM.",
+    required = false,
     example = """
       {
   "${'$'}schema": "//w3schools.in/json-06/schema#",
@@ -62,6 +67,7 @@ data class PromptVersionRequest(
     "last_name"
   ]
 }
-    """)
+    """,
+  )
   val responseContract: JsonNode? = null,
 )
