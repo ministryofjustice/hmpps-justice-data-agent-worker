@@ -10,7 +10,7 @@ dependencies {
   implementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter:3.0.1")
   implementation("org.springframework.boot:spring-boot-starter-webflux")
   implementation("org.springframework.boot:spring-boot-starter-webclient")
-  implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.1.1")
+  implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:3.2.0")
   implementation("uk.gov.justice.service.hmpps:hmpps-sqs-spring-boot-starter:7.4.1")
   implementation("org.springframework.boot:spring-boot-starter-data-r2dbc")
   implementation("com.fasterxml.uuid:java-uuid-generator:5.2.0")
@@ -19,7 +19,7 @@ dependencies {
   implementation("org.flywaydb:flyway-database-postgresql")
   implementation("org.springframework.boot:spring-boot-starter-flyway:4.1.1")
   implementation("org.postgresql:r2dbc-postgresql:1.1.2.RELEASE")
-  implementation("org.postgresql:postgresql:42.7.13")
+  implementation("org.postgresql:postgresql:42.7.14")
   implementation("com.networknt:json-schema-validator:1.4.0")
   implementation("org.springframework.ai:spring-ai-starter-model-anthropic")
   implementation("org.springframework.ai:spring-ai-starter-model-openai")
@@ -39,6 +39,15 @@ dependencies {
   testImplementation("org.wiremock:wiremock-standalone:3.13.2")
   testImplementation("io.swagger.parser.v3:swagger-parser:2.1.47") {
     exclude(group = "io.swagger.core.v3")
+  }
+
+  constraints {
+    implementation("com.ongres.scram:scram-client:3.3") {
+      because("CVE-2026-53712 - remove when r2dbc-postgresql brings scram 3.3+")
+    }
+    implementation("com.ongres.scram:scram-common:3.3") {
+      because("CVE-2026-53712 - remove when r2dbc-postgresql brings scram 3.3+")
+    }
   }
 }
 
