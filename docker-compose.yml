@@ -9,6 +9,19 @@ services:
     volumes:
       - ./init-for-dev-only.sql:/docker-entrypoint-initdb.d/init-for-dev-only.sql
     network_mode: "bridge"
+  localstack:
+    image: localstack/localstack:4
+    networks:
+      - hmpps
+    container_name: localstack
+    ports:
+      - "4567:4566"
+    environment:
+      - SERVICES=sqs
+      - DEBUG=${DEBUG-}
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
   hmpps-justice-data-agent-worker:
     image: ghcr.io/ministryofjustice/hmpps-justice-data-agent-worker:latest
     networks:

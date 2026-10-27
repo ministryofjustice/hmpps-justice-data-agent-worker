@@ -8,8 +8,20 @@ hmpps:
     ai-gateway:
       model:
         prefix: bedrock-dpr-development
-  #sqs:
-   #queues:
-     #domaineventsqueue:
-            #queueName: ${HMPPS_SQS_QUEUES_DOMAINEVENTSQUEUE_QUEUE_NAME}
-            #dlqName: ${HMPPS_SQS_QUEUES_DOMAINEVENTSQUEUE_DLQ_NAME}
+#Uncomment sqs to run application locally with sqs queues.
+    #sqs:
+      #message:
+        #visibility:
+          #timeout: 20
+      #enabled: true
+      #provider: localstack
+      #localstackUrl: http://localhost:4567
+      #region: eu-west-2
+      #queues:
+        #jdarequestqueues:
+          #queuename: sqs_request_queue_name
+          #dlqName: sqs_request_dlq_queue_name
+        #jdaresponsequeues:
+          #queuename: sqs_response_queue_name
+          #dlqName: sqs_response_dlq_queue_name
+
