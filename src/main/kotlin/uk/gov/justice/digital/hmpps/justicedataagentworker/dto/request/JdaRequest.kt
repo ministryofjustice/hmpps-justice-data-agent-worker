@@ -27,6 +27,8 @@ data class JdaRequest(
   // This field is for internal use only for async jda request only, to add request history id before putting jda request in queue
   @Schema(hidden = true)
   var requestId: UUID? = null,
+  @Schema(description = "Json pointers in input and output data for validation. Use this for verifying values in response from LLM matches with values in data sent to LLM.", required = false)
+  val validityIdentifier: ValidityIdentifier? = null,
 )
 
 data class Prompt(
@@ -34,4 +36,11 @@ data class Prompt(
   val key: String,
   @Schema(description = "Prompt version to be used. When no value is passed, latest version is always used.", required = false, example = "1")
   val version: Long? = null,
+)
+
+data class ValidityIdentifier(
+  @Schema(description = "Json pointer for identifier in input data sent to LLM", required = true, example = "/item-id")
+  val keyInInputData: String,
+  @Schema(description = "Json pointer for identifier in output data received from LLM", required = true, example = "/item-id")
+  val keyInOutputData: String,
 )

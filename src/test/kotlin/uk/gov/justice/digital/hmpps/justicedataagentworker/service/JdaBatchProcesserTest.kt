@@ -26,7 +26,7 @@ class JdaBatchProcesserTest(@Autowired private val jdaBatchProcesser: JdaBatchPr
 
   @Test
   fun `test batch process`() {
-    val jdaRequest = DataGenerator.buildJdaRequest(UUID.randomUUID(), "test key", 1)
+    val jdaRequest = DataGenerator.buildJdaRequest(UUID.randomUUID(), "test key", 1, null, null)
     val value = ObjectMapper().writeValueAsString(jdaRequest)
     val req = ObjectMapper().readValue(value, JdaRequest::class.java)
     var jdaRequests: List<JdaRequest> = mutableListOf()
@@ -42,7 +42,7 @@ class JdaBatchProcesserTest(@Autowired private val jdaBatchProcesser: JdaBatchPr
 
   @Test
   fun `test batch process for request data not array`() {
-    val jdaRequest = DataGenerator.buildJdaRequest(UUID.randomUUID(), "test key", 1)
+    val jdaRequest = DataGenerator.buildJdaRequest(UUID.randomUUID(), "test key", 1, null, null)
     jdaRequest.requestData = """
       {
       "case_not_id": "${UUID.randomUUID()}",
@@ -60,7 +60,7 @@ class JdaBatchProcesserTest(@Autowired private val jdaBatchProcesser: JdaBatchPr
 
   @Test
   fun `test batch process for batch size null`() {
-    val jdaRequest = DataGenerator.buildJdaRequest(UUID.randomUUID(), "test key", 1)
+    val jdaRequest = DataGenerator.buildJdaRequest(UUID.randomUUID(), "test key", 1, null, null)
     val value = ObjectMapper().writeValueAsString(jdaRequest)
     val req = ObjectMapper().readValue(value, JdaRequest::class.java)
     var jdaRequests: List<JdaRequest> = mutableListOf()

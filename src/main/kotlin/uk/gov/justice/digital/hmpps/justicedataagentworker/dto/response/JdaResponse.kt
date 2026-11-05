@@ -27,5 +27,6 @@ data class JdaResponse(
     """,
   )
   val responseData: Any,
+  val missingIdentifiers: Set<String>? = null,
   val metaData: MetaData,
 )

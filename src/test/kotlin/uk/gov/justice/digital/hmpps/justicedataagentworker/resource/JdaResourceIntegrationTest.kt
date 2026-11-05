@@ -6,6 +6,7 @@ import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertNotNull
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.ParameterizedTypeReference
@@ -108,7 +109,7 @@ class JdaResourceIntegrationTest(
       .header("Content-Type", "application/json")
       .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
       .bodyValue(
-        DataGenerator.buildJdaRequest(UUID.randomUUID(), promptKey, 1),
+        DataGenerator.buildJdaRequest(UUID.randomUUID(), promptKey, 1, null, null),
       )
       .accept(MediaType.APPLICATION_JSON)
       .exchange()
@@ -126,6 +127,28 @@ class JdaResourceIntegrationTest(
     assertEquals(27, requestHistory?.promptTokens)
     assertEquals(436, requestHistory?.completionTokens)
     assertEquals(463, requestHistory?.totalTokens)
+  }
+
+  @Test
+  fun `submit synchronous request with identifier`() {
+    var requestHistory: RequestHistory?
+    val response = webTestClient.post().uri("/v1/submitrequest")
+      .headers(setAuthorisation(roles = listOf("ROLE_JUSTICE_DATA_AGENT_REQUESTS")))
+      .header("Content-Type", "application/json")
+      .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
+      .bodyValue(
+        DataGenerator.buildJdaRequest(UUID.randomUUID(), promptKey, 1, "/item_id", "/item_id"),
+      )
+      .accept(MediaType.APPLICATION_JSON)
+      .exchange()
+      .expectStatus().isOk
+      .expectHeader().contentType(MediaType.APPLICATION_JSON_VALUE)
+      .expectBody(object : ParameterizedTypeReference<JdaResponse>() {})
+      .consumeWith(System.out::println)
+      .returnResult()
+      .responseBody as JdaResponse
+    assertNotNull(response.missingIdentifiers)
+    assertEquals(true, (response.missingIdentifiers.size > 0))
   }
 
   @Test
@@ -165,7 +188,7 @@ class JdaResourceIntegrationTest(
       .header("Content-Type", "application/json")
       .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
       .bodyValue(
-        DataGenerator.buildJdaRequest(UUID.randomUUID(), promptKey, null),
+        DataGenerator.buildJdaRequest(UUID.randomUUID(), promptKey, null, null, null),
       )
       .accept(MediaType.APPLICATION_JSON)
       .exchange()
@@ -215,7 +238,7 @@ class JdaResourceIntegrationTest(
       .header("Content-Type", "application/json")
       .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
       .bodyValue(
-        DataGenerator.buildJdaRequest(UUID.randomUUID(), key, 1),
+        DataGenerator.buildJdaRequest(UUID.randomUUID(), key, 1, null, null),
       )
       .accept(MediaType.APPLICATION_JSON)
       .exchange()
@@ -263,7 +286,7 @@ class JdaResourceIntegrationTest(
       .header("Content-Type", "application/json")
       .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
       .bodyValue(
-        DataGenerator.buildJdaRequest(UUID.randomUUID(), promptKey, 1),
+        DataGenerator.buildJdaRequest(UUID.randomUUID(), promptKey, 1, null, null),
       )
       .accept(MediaType.APPLICATION_JSON)
       .exchange()
@@ -284,7 +307,7 @@ class JdaResourceIntegrationTest(
       .header("Content-Type", "application/json")
       .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
       .bodyValue(
-        DataGenerator.buildJdaRequest(UUID.randomUUID(), promptKey, 1),
+        DataGenerator.buildJdaRequest(UUID.randomUUID(), promptKey, 1, null, null),
       )
       .accept(MediaType.APPLICATION_JSON)
       .exchange()
@@ -303,7 +326,7 @@ class JdaResourceIntegrationTest(
     val correlationId = UUID.randomUUID()
     val promptKey = promptKey
     val version = 1L
-    val jdaRequest = DataGenerator.buildJdaRequest(correlationId, promptKey, version)
+    val jdaRequest = DataGenerator.buildJdaRequest(correlationId, promptKey, version, null, null)
     val sqsTemplate =
       SqsTemplate
         .newTemplate(requestQueueAwsSqsClient)
@@ -345,7 +368,7 @@ class JdaResourceIntegrationTest(
       .header("Content-Type", "application/json")
       .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
       .bodyValue(
-        DataGenerator.buildJdaRequest(correlationId, promptKey, version),
+        DataGenerator.buildJdaRequest(correlationId, promptKey, version, null, null),
       )
       .accept(MediaType.APPLICATION_JSON)
       .exchange()
@@ -418,7 +441,7 @@ class JdaResourceIntegrationTest(
       .header("Content-Type", "application/json")
       .header(HttpHeaders.ACCEPT, MediaType.APPLICATION_JSON_VALUE)
       .bodyValue(
-        DataGenerator.buildJdaRequest(correlationId, promptKey, version),
+        DataGenerator.buildJdaRequest(correlationId, promptKey, version, null, null),
       )
       .accept(MediaType.APPLICATION_JSON)
       .exchange()
