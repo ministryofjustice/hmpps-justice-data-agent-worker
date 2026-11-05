@@ -4,6 +4,7 @@ import com.fasterxml.uuid.Generators
 import io.r2dbc.postgresql.codec.Json
 import tools.jackson.databind.ObjectMapper
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaRequest
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.ValidityIdentifier
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.Prompt
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.PromptVersion
 import java.time.LocalDateTime
@@ -112,6 +113,7 @@ class DataGenerator {
       createdBy.toString(),
       LocalDateTime.now(ZoneOffset.UTC),
     )
+
     val time = LocalDateTime.now(ZoneOffset.UTC)
     val id = UUID.randomUUID().toString()
     fun buildPromptVersion(promptId: UUID, requestJsonSchema: String, responseJsonSchema: String): PromptVersion = PromptVersion(
@@ -165,11 +167,22 @@ class DataGenerator {
       }
     """.trimIndent()
 
-    fun buildJdaRequest(correlationId: UUID, promptKey: String, version: Long?): JdaRequest = JdaRequest(
-      correlationId,
-      uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.Prompt(promptKey, version),
-      ObjectMapper().readTree(
-        """
+    fun buildJdaRequest(
+      correlationId: UUID,
+      promptKey: String,
+      version: Long?,
+      inputIdentifierKey: String?,
+      outputIdentifierKey: String?,
+    ): JdaRequest {
+      var visibilityIdentifier: ValidityIdentifier? = null
+      if (inputIdentifierKey != null && outputIdentifierKey != null) {
+        visibilityIdentifier = ValidityIdentifier(inputIdentifierKey, outputIdentifierKey)
+      }
+      return JdaRequest(
+        correlationId,
+        uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.Prompt(promptKey, version),
+        ObjectMapper().readTree(
+          """
           [
             {
               "item_id": "76304207-b018-4812-a3bf-f294a05347e8",
@@ -192,8 +205,11 @@ class DataGenerator {
               "case_note_text": "On 22/05/2025 at approximately 11:30, Mr. Other approached me near the servery on B wing and requested to speak about a personal property matter. He stated that several items of clothing had gone missing following a cell search carried out the previous week. I explained that I was not present during that search but that I would look into the matter and follow up with him. Mr. Other became increasingly agitated and began raising his voice, accusing staff of stealing from him. He used threatening and offensive language toward me directly. I activated my body-worn camera and asked him calmly to return to his cell while the matter was investigated. Mr. Other became physically confrontational. A colleague responded to my request for assistance and together we guided Mr. Other back to his cell using appropriate restraint techniques. He was secured in his cell without further incident. Mr. Other will be placed on report for threatening behaviour and failure to comply with a lawful instruction."
             }
           ]
-        """.trimIndent(),
-      ),
-    )
+          """.trimIndent(),
+        ),
+        null,
+        visibilityIdentifier,
+      )
+    }
   }
 }

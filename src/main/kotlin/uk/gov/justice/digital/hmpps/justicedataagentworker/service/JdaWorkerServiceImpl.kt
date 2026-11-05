@@ -33,6 +33,7 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.model.RequestHistory
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.Status
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.event.JdaMessagePublisher
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.integration.LiteLlmService
+import uk.gov.justice.digital.hmpps.justicedataagentworker.validator.JsonPointerProcessor
 import uk.gov.justice.digital.hmpps.justicedataagentworker.validator.JsonSchemaValidator
 import uk.gov.justice.hmpps.sqs.HmppsQueueService
 import java.time.Duration
@@ -48,6 +49,7 @@ class JdaWorkerServiceImpl(
   private val objectMapper: ObjectMapper,
   private val jdaMessagePublisher: JdaMessagePublisher,
   private val jdaBatchProcesser: JdaBatchProcesser,
+  private val jsonPointerProcessor: JsonPointerProcessor,
   @param:Value("\${hmpps.sqs.message.visibility.timeout}") private val visibilityTimeOut: Int,
 ) : JdaWorkerService {
 
@@ -169,6 +171,17 @@ class JdaWorkerServiceImpl(
     requestHistory.totalTokens = response!!.totalTokens
     requestHistory.totalOutputItems = totalOutputItems
     requestHistoryService.saveRequestHistory(requestHistory)
+    var missingIdentifiers: Set<String>? = null
+    if (jdaRequest.validityIdentifier != null) {
+      missingIdentifiers = mutableSetOf<String>()
+      val inputIdentifiers = jsonPointerProcessor.getIdentifierFromJsonPath(jdaRequest.requestData, jdaRequest.validityIdentifier.keyInInputData)
+      val outputIdentifiers = jsonPointerProcessor.getIdentifierFromJsonPath(dataResponse, jdaRequest.validityIdentifier.keyInOutputData)
+      inputIdentifiers.stream().forEach { inputIdentifier ->
+        if (!outputIdentifiers.contains(inputIdentifier)) {
+          missingIdentifiers.add(inputIdentifier)
+        }
+      }
+    }
     return JdaResponse(
       requestHistory.id,
       jdaRequest.correlationId,
@@ -176,6 +189,7 @@ class JdaWorkerServiceImpl(
       status,
       null,
       dataResponse,
+      missingIdentifiers = missingIdentifiers,
       MetaData(
         RequestType.SYNC,
         null,
@@ -233,6 +247,7 @@ class JdaWorkerServiceImpl(
     var status: uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status? = null
     var historyStatus: Status? = null
     var dataResponse: Any? = null
+    var missingIdentifiers: Set<String>? = null
     coroutineScope {
       launch {
         requestHistoryService.saveRequestHistory(requestHistory)
@@ -266,6 +281,16 @@ class JdaWorkerServiceImpl(
             if (jsonNode.isArray) {
               val values = jsonNode as ArrayNode
               llmResponses.addAll(values)
+            }
+            if (jdaRequest.validityIdentifier != null) {
+              missingIdentifiers = mutableSetOf<String>()
+              val inputIdentifiers = jsonPointerProcessor.getIdentifierFromJsonPath(request, jdaRequest.validityIdentifier.keyInInputData)
+              val outputIdentifiers = jsonPointerProcessor.getIdentifierFromJsonPath(response.response, jdaRequest.validityIdentifier.keyInOutputData)
+              inputIdentifiers.stream().forEach { inputIdentifier ->
+                if (!outputIdentifiers.contains(inputIdentifier)) {
+                  missingIdentifiers.add(inputIdentifier)
+                }
+              }
             }
           }
           totalOutputItems = llmResponses.size()
@@ -317,6 +342,7 @@ class JdaWorkerServiceImpl(
       uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.SUCCEEDED,
       null,
       dataResponse,
+      missingIdentifiers = missingIdentifiers,
       MetaData(
         RequestType.ASYNC,
         null,
