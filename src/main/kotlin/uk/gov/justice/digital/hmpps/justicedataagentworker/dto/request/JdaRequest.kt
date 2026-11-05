@@ -39,8 +39,8 @@ data class Prompt(
 )
 
 data class ValidityIdentifier(
-  @Schema(description = "Json pointer for identifier in input data sent to LLM", required = true, example = "/item-id")
+  @Schema(description = "Json pointer for identifier in input data sent to LLM.", required = true, example = "/item-id")
   val keyInInputData: String,
-  @Schema(description = "Json pointer for identifier in output data received from LLM", required = true, example = "/item-id")
+  @Schema(description = "Json pointer for identifier in output data received from LLM.", required = true, example = "/item-id")
   val keyInOutputData: String,
 )
