@@ -20,6 +20,10 @@ dependencies {
   implementation("org.springframework.boot:spring-boot-starter-flyway:4.1.1")
   implementation("org.postgresql:r2dbc-postgresql:1.1.2.RELEASE")
   implementation("org.postgresql:postgresql:42.7.14")
+  constraints {
+    implementation("com.ongres.scram:scram-client:3.4")
+    implementation("com.ongres.scram:scram-common:3.4")
+  }
   implementation("com.networknt:json-schema-validator:1.4.0")
   implementation("org.springframework.ai:spring-ai-starter-model-anthropic")
   implementation("org.springframework.ai:spring-ai-starter-model-openai")
