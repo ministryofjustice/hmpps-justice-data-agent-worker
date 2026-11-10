@@ -23,6 +23,7 @@ dependencies {
   constraints {
     implementation("com.ongres.scram:scram-client:3.4")
     implementation("com.ongres.scram:scram-common:3.4")
+    implementation("org.webjars:swagger-ui:5.34.1")
   }
   implementation("com.networknt:json-schema-validator:1.4.0")
   implementation("org.springframework.ai:spring-ai-starter-model-anthropic")
