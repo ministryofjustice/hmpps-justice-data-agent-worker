@@ -53,6 +53,7 @@ class JdaWorkerServiceImpl(
   private val jsonPointerProcessor: JsonPointerProcessor,
   private val telemetryService: TelemetryService,
   @param:Value("\${hmpps.sqs.message.visibility.timeout}") private val visibilityTimeOut: Int,
+  @param:Value("\${hmpps.sqs.queues.jdarequestqueues.queuename}") private val requestQueueName: String,
 ) : JdaWorkerService {
 
   @Autowired
@@ -139,6 +140,7 @@ class JdaWorkerServiceImpl(
           )
           telemetryService.sendTelemetryData(
             eventName = AzureCustomEvents.LLM_REFUSED_REQUEST.toString(),
+            queueName = null,
             requestId = requestHistory.id,
             correlationId = requestHistory.correlationId,
             promptKey = promptVersionResponse.promptKey,
@@ -156,6 +158,7 @@ class JdaWorkerServiceImpl(
           )
           telemetryService.sendTelemetryData(
             eventName = AzureCustomEvents.RESPONSE_CONTRACT_VALIDATION_FAILED.toString(),
+            queueName = null,
             requestId = requestHistory.id,
             correlationId = requestHistory.correlationId,
             promptKey = promptVersionResponse.promptKey,
@@ -173,6 +176,7 @@ class JdaWorkerServiceImpl(
           )
           telemetryService.sendTelemetryData(
             eventName = AzureCustomEvents.LLM_REFUSED_REQUEST.toString(),
+            queueName = null,
             requestId = requestHistory.id,
             correlationId = requestHistory.correlationId,
             promptKey = promptVersionResponse.promptKey,
@@ -270,6 +274,17 @@ class JdaWorkerServiceImpl(
         errorAt = null,
       )
     }
+    telemetryService.sendTelemetryData(
+      eventName = AzureCustomEvents.MESSAGE_TAKEN_OUT_FROM_QUEUE.toString(),
+      queueName = requestQueueName,
+      requestId = requestHistory.id,
+      correlationId = jdaRequest.correlationId,
+      promptKey = promptVersionResponse.promptKey,
+      promptVersion = promptVersionResponse.promptVersion.version,
+      dateTime = LocalDateTime.now(ZoneOffset.UTC),
+      inputItemNum = null,
+      outputItemNum = null,
+    )
     var inputJson = jdaRequest.requestData
     inputJson = Json.pretty(inputJson)
     val jdaRequests = jdaBatchProcesser.processJdaRequest(jdaRequest, promptVersionResponse.promptVersion.batchSize)
@@ -334,6 +349,7 @@ class JdaWorkerServiceImpl(
           )
           telemetryService.sendTelemetryData(
             eventName = AzureCustomEvents.LLM_REFUSED_REQUEST.toString(),
+            queueName = null,
             requestId = requestHistory.id,
             correlationId = requestHistory.correlationId,
             promptKey = promptVersionResponse.promptKey,
@@ -351,6 +367,7 @@ class JdaWorkerServiceImpl(
           )
           telemetryService.sendTelemetryData(
             eventName = AzureCustomEvents.RESPONSE_CONTRACT_VALIDATION_FAILED.toString(),
+            queueName = null,
             requestId = requestHistory.id,
             correlationId = requestHistory.correlationId,
             promptKey = promptVersionResponse.promptKey,
@@ -368,6 +385,7 @@ class JdaWorkerServiceImpl(
           )
           telemetryService.sendTelemetryData(
             eventName = AzureCustomEvents.LLM_REFUSED_REQUEST.toString(),
+            queueName = null,
             requestId = requestHistory.id,
             correlationId = requestHistory.correlationId,
             promptKey = promptVersionResponse.promptKey,

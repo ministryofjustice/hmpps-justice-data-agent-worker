@@ -6,11 +6,16 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaRequest
+import uk.gov.justice.digital.hmpps.justicedataagentworker.model.AzureCustomEvents
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.JdaWorkerService
+import uk.gov.justice.digital.hmpps.justicedataagentworker.service.TelemetryService
+import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 @Component
 class JdaMessageListenerImpl(
   private val jdaWorkerService: JdaWorkerService,
+  private val telemetryService: TelemetryService,
   @param:Value("\${hmpps.sqs.queues.jdarequestqueues.dlqName}") private val requestDlqName: String,
 ) : JdaMessageListener {
   companion object {

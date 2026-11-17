@@ -17,10 +17,11 @@ class TelemetryService(private val telemetryClient: TelemetryClient) {
 
   suspend fun sendTelemetryData(
     eventName: String,
+    queueName: String?,
     requestId: UUID,
     correlationId: UUID,
     promptKey: String,
-    promptVersion: Int,
+    promptVersion: Int?,
     dateTime: LocalDateTime,
     inputItemNum: Int?,
     outputItemNum: Int?,
@@ -29,8 +30,13 @@ class TelemetryService(private val telemetryClient: TelemetryClient) {
     map["requestId"] = requestId.toString()
     map["correlationId"] = correlationId.toString()
     map["promptKey"] = promptKey
-    map["promptVersion"] = promptVersion.toString()
     map["dateTime"] = dateTime.format(FORMATTER)
+    if (queueName != null) {
+      map["queueName"] = queueName
+    }
+    if (promptVersion != null) {
+      map["promptVersion"] = promptVersion.toString()
+    }
     if (inputItemNum != null) {
       map["inputItemNum"] = inputItemNum.toString()
     }
@@ -41,7 +47,7 @@ class TelemetryService(private val telemetryClient: TelemetryClient) {
     try {
       telemetryClient.trackEvent(eventName, map, null)
     } catch (e: Exception) {
-      logger.error("An error occured sending telemetry event: $eventName, error: ${e.message}")
+      logger.error("An error occurred sending telemetry event: $eventName, error: ${e.message}")
     }
   }
 }
