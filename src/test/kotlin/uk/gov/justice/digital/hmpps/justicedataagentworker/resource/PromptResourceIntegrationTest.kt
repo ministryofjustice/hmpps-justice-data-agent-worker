@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
+import tools.jackson.databind.JsonNode
 import tools.jackson.databind.ObjectMapper
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.PromptVersionRequest
@@ -21,6 +22,7 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.repository.PromptVers
 import uk.gov.justice.digital.hmpps.justicedataagentworker.utility.DataGenerator
 import uk.gov.justice.hmpps.kotlin.common.ErrorResponse
 import java.time.Duration
+import java.time.LocalDateTime
 import java.util.UUID
 import kotlin.random.Random
 
@@ -110,15 +112,16 @@ class PromptResourceIntegrationTest : IntegrationTestBase() {
       .exchange()
       .expectStatus().isCreated
       .expectHeader().contentType(MediaType.APPLICATION_JSON_VALUE)
-      .expectBody(object : ParameterizedTypeReference<PromptResponse>() {})
+      .expectBody(object : ParameterizedTypeReference<PromptTestResponse>() {})
       .consumeWith(System.out::println)
       .returnResult()
-      .responseBody as PromptResponse
+      .responseBody as PromptTestResponse
 
     assertNotNull(response)
     assertEquals(key, response.promptKey)
     assertEquals(1, response.promptVersion.version)
     assertEquals(createdBy, response.createdBy)
+
     assertEquals(mapper.readTree(DataGenerator.jsonRequestSchema.trimIndent()), response.promptVersion.requestContract)
     assertEquals(mapper.readTree(DataGenerator.jsonResponseSchema.trimIndent()), response.promptVersion.responseContract)
   }
@@ -325,3 +328,26 @@ class PromptResourceIntegrationTest : IntegrationTestBase() {
       .responseBody as ErrorResponse
   }
 }
+
+data class PromptTestResponse(
+  var id: UUID,
+  val promptKey: String,
+  val description: String,
+  val isDeleted: Boolean,
+  val createdBy: String,
+  val createdDate: LocalDateTime,
+  val promptVersion: PromptVersionResponse,
+)
+
+data class PromptVersionResponse(
+  var id: UUID,
+  val version: Int,
+  val llmModel: String,
+  val promptTemplate: String,
+  val batchSize: Int,
+  val batchArrayName: String,
+  val requestContract: JsonNode,
+  val responseContract: JsonNode? = null,
+  val createdBy: String,
+  val createdDate: LocalDateTime,
+)
