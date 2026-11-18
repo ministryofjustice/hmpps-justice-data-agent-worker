@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.service.event
 
 import io.awspring.cloud.sqs.operations.SqsTemplate
-import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
@@ -44,18 +43,18 @@ class JdaMessagePublisherImpl(
       logger.info("Sending jda request message to queue: $requestQueueName with correlation id: ${jdaRequest.correlationId}")
       sqsTemplate.send { to -> to.queue(requestQueueName).payload(jdaRequest) }
       logger.info("Jda request message sent to queue: $requestQueueName with correlation id: ${jdaRequest.correlationId}")
-        telemetryService.sendTelemetryData(
-          eventName = AzureCustomEvents.MESSAGE_SENT_TO_QUEUE.toString(),
-          queueName = requestQueueName,
-          requestId = jdaRequest.requestId!!,
-          correlationId = jdaRequest.correlationId,
-          promptKey = jdaRequest.prompt.key,
-          promptVersion = jdaRequest.prompt.version?.toInt(),
-          dateTime = LocalDateTime.now(ZoneOffset.UTC),
-          inputItemNum = null,
-          outputItemNum = null,
-        )
-      } catch (e: Exception) {
+      telemetryService.sendTelemetryData(
+        eventName = AzureCustomEvents.MESSAGE_SENT_TO_QUEUE.toString(),
+        queueName = requestQueueName,
+        requestId = jdaRequest.requestId!!,
+        correlationId = jdaRequest.correlationId,
+        promptKey = jdaRequest.prompt.key,
+        promptVersion = jdaRequest.prompt.version?.toInt(),
+        dateTime = LocalDateTime.now(ZoneOffset.UTC),
+        inputItemNum = null,
+        outputItemNum = null,
+      )
+    } catch (e: Exception) {
       logger.error("Exception occurred when sending message to queue: $requestQueueName with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
       sqsTemplate.send { to -> to.queue(requestDlqName).payload(jdaRequest) }
       logger.info("Jda request message with correlation id: ${jdaRequest.correlationId} sent to dlq name: $requestDlqName")
