@@ -1,7 +1,6 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request
 
 import io.swagger.v3.oas.annotations.media.Schema
-import tools.jackson.databind.JsonNode
 
 data class PromptVersionRequest(
   @Schema(description = "Name of the model without any prefix added", required = true, example = "claud-4-6")
@@ -40,7 +39,7 @@ data class PromptVersionRequest(
 }
     """,
   )
-  val requestContract: JsonNode,
+  val requestContract: Any,
   @Schema(
     description = "Json schema for data expected from LLM.",
     required = false,
@@ -69,5 +68,5 @@ data class PromptVersionRequest(
 }
     """,
   )
-  val responseContract: JsonNode? = null,
+  val responseContract: Any? = null,
 )

@@ -7,10 +7,12 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaRequest
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.JdaWorkerService
+import uk.gov.justice.digital.hmpps.justicedataagentworker.service.TelemetryService
 
 @Component
 class JdaMessageListenerImpl(
   private val jdaWorkerService: JdaWorkerService,
+  private val telemetryService: TelemetryService,
   @param:Value("\${hmpps.sqs.queues.jdarequestqueues.dlqName}") private val requestDlqName: String,
 ) : JdaMessageListener {
   companion object {

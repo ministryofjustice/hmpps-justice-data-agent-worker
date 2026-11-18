@@ -29,6 +29,7 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.JdaValidati
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.LiteLlmException
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.NotFoundException
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.SqsQueueException
+import uk.gov.justice.digital.hmpps.justicedataagentworker.model.AzureCustomEvents
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.RequestHistory
 import uk.gov.justice.digital.hmpps.justicedataagentworker.model.Status
 import uk.gov.justice.digital.hmpps.justicedataagentworker.service.event.JdaMessagePublisher
@@ -50,7 +51,9 @@ class JdaWorkerServiceImpl(
   private val jdaMessagePublisher: JdaMessagePublisher,
   private val jdaBatchProcesser: JdaBatchProcesser,
   private val jsonPointerProcessor: JsonPointerProcessor,
+  private val telemetryService: TelemetryService,
   @param:Value("\${hmpps.sqs.message.visibility.timeout}") private val visibilityTimeOut: Int,
+  @param:Value("\${hmpps.sqs.queues.jdarequestqueues.queuename}") private val requestQueueName: String,
 ) : JdaWorkerService {
 
   @Autowired
@@ -126,7 +129,7 @@ class JdaWorkerServiceImpl(
             requestHistory,
           )
           response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory)
-          if ((promptVersionResponse.promptVersion.responseContract?.isNull) == false) {
+          if (promptVersionResponse.promptVersion.responseContract != null) {
             validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response.response, requestHistory)
           }
         } catch (e: LiteLlmException) {
@@ -135,6 +138,17 @@ class JdaWorkerServiceImpl(
             message = e.message!!,
             stage = Stage.GATEWAY,
           )
+          telemetryService.sendTelemetryData(
+            eventName = AzureCustomEvents.LLM_REFUSED_REQUEST.toString(),
+            queueName = null,
+            requestId = requestHistory.id,
+            correlationId = requestHistory.correlationId,
+            promptKey = promptVersionResponse.promptKey,
+            promptVersion = promptVersionResponse.promptVersion.version,
+            dateTime = LocalDateTime.now(ZoneOffset.UTC),
+            inputItemNum = null,
+            outputItemNum = null,
+          )
           logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
         } catch (e: JdaValidationException) {
           error = Error(
@@ -142,12 +156,34 @@ class JdaWorkerServiceImpl(
             message = e.message!!,
             stage = Stage.VALIDATION,
           )
+          telemetryService.sendTelemetryData(
+            eventName = AzureCustomEvents.RESPONSE_CONTRACT_VALIDATION_FAILED.toString(),
+            queueName = null,
+            requestId = requestHistory.id,
+            correlationId = requestHistory.correlationId,
+            promptKey = promptVersionResponse.promptKey,
+            promptVersion = promptVersionResponse.promptVersion.version,
+            dateTime = LocalDateTime.now(ZoneOffset.UTC),
+            inputItemNum = null,
+            outputItemNum = null,
+          )
           logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
         } catch (e: Exception) {
           error = Error(
             code = "LLM_REFUSED_REQUEST",
             message = e.message!!,
             stage = Stage.INTERNAL,
+          )
+          telemetryService.sendTelemetryData(
+            eventName = AzureCustomEvents.LLM_REFUSED_REQUEST.toString(),
+            queueName = null,
+            requestId = requestHistory.id,
+            correlationId = requestHistory.correlationId,
+            promptKey = promptVersionResponse.promptKey,
+            promptVersion = promptVersionResponse.promptVersion.version,
+            dateTime = LocalDateTime.now(ZoneOffset.UTC),
+            inputItemNum = null,
+            outputItemNum = null,
           )
           logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
         }
@@ -238,6 +274,17 @@ class JdaWorkerServiceImpl(
         errorAt = null,
       )
     }
+    telemetryService.sendTelemetryData(
+      eventName = AzureCustomEvents.MESSAGE_TAKEN_OUT_FROM_QUEUE.toString(),
+      queueName = requestQueueName,
+      requestId = requestHistory.id,
+      correlationId = jdaRequest.correlationId,
+      promptKey = promptVersionResponse.promptKey,
+      promptVersion = promptVersionResponse.promptVersion.version,
+      dateTime = LocalDateTime.now(ZoneOffset.UTC),
+      inputItemNum = null,
+      outputItemNum = null,
+    )
     var inputJson = jdaRequest.requestData
     inputJson = Json.pretty(inputJson)
     val jdaRequests = jdaBatchProcesser.processJdaRequest(jdaRequest, promptVersionResponse.promptVersion.batchSize)
@@ -274,7 +321,7 @@ class JdaWorkerServiceImpl(
             if (response.totalTokens != null) {
               totalTokens += response.totalTokens
             }
-            if (promptVersionResponse.promptVersion.responseContract?.isNull == false) {
+            if (promptVersionResponse.promptVersion.responseContract != null) {
               validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response.response, requestHistory)
             }
             val jsonNode = objectMapper.readTree(response.response)
@@ -300,6 +347,17 @@ class JdaWorkerServiceImpl(
             message = e.message!!,
             stage = Stage.GATEWAY,
           )
+          telemetryService.sendTelemetryData(
+            eventName = AzureCustomEvents.LLM_REFUSED_REQUEST.toString(),
+            queueName = null,
+            requestId = requestHistory.id,
+            correlationId = requestHistory.correlationId,
+            promptKey = promptVersionResponse.promptKey,
+            promptVersion = promptVersionResponse.promptVersion.version,
+            dateTime = LocalDateTime.now(ZoneOffset.UTC),
+            inputItemNum = null,
+            outputItemNum = null,
+          )
           logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
         } catch (e: JdaValidationException) {
           error = Error(
@@ -307,12 +365,34 @@ class JdaWorkerServiceImpl(
             message = e.message!!,
             stage = Stage.VALIDATION,
           )
+          telemetryService.sendTelemetryData(
+            eventName = AzureCustomEvents.RESPONSE_CONTRACT_VALIDATION_FAILED.toString(),
+            queueName = null,
+            requestId = requestHistory.id,
+            correlationId = requestHistory.correlationId,
+            promptKey = promptVersionResponse.promptKey,
+            promptVersion = promptVersionResponse.promptVersion.version,
+            dateTime = LocalDateTime.now(ZoneOffset.UTC),
+            inputItemNum = null,
+            outputItemNum = null,
+          )
           logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
         } catch (e: Exception) {
           error = Error(
             code = "LLM_REFUSED_REQUEST",
             message = e.message!!,
             stage = Stage.INTERNAL,
+          )
+          telemetryService.sendTelemetryData(
+            eventName = AzureCustomEvents.LLM_REFUSED_REQUEST.toString(),
+            queueName = null,
+            requestId = requestHistory.id,
+            correlationId = requestHistory.correlationId,
+            promptKey = promptVersionResponse.promptKey,
+            promptVersion = promptVersionResponse.promptVersion.version,
+            dateTime = LocalDateTime.now(ZoneOffset.UTC),
+            inputItemNum = null,
+            outputItemNum = null,
           )
           logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
         }

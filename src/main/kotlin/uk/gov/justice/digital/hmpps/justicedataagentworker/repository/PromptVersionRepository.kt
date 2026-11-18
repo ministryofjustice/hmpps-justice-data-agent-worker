@@ -1,5 +1,6 @@
 package uk.gov.justice.digital.hmpps.justicedataagentworker.repository
 
+import org.springframework.data.r2dbc.repository.Query
 import org.springframework.data.repository.kotlin.CoroutineCrudRepository
 import org.springframework.data.repository.kotlin.CoroutineSortingRepository
 import org.springframework.stereotype.Repository
@@ -15,4 +16,7 @@ interface PromptVersionRepository :
   suspend fun findFirstByPromptIdOrderByVersionDesc(promptId: UUID): PromptVersion?
 
   suspend fun findPromptVersionsByPromptIdOrderByVersionAsc(promptId: UUID): List<PromptVersion>
+
+  @Query("Select DISTINCT llm_model from prompt_version")
+  suspend fun findDistinctModelNames(): List<String>
 }

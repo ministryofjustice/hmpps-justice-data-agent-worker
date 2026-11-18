@@ -1,0 +1,9 @@
+package uk.gov.justice.digital.hmpps.justicedataagentworker.model
+
+enum class AzureCustomEvents {
+  MESSAGE_SENT_TO_QUEUE,
+  MESSAGE_TAKEN_OUT_FROM_QUEUE,
+  REQUEST_CONTRACT_VALIDATION_FAILED,
+  RESPONSE_CONTRACT_VALIDATION_FAILED,
+  LLM_REFUSED_REQUEST,
+}
