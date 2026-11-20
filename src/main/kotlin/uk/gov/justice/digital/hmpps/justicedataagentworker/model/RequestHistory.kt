@@ -16,7 +16,7 @@ data class RequestHistory(
   val synchronousRequest: Boolean,
   val correlationId: UUID,
   val promptVersionId: UUID,
-  val queuedAt: LocalDateTime? = null,
+  var queuedAt: LocalDateTime? = null,
   val receivedAt: LocalDateTime? = null,
   var completedAt: LocalDateTime? = null,
   var status: Status,

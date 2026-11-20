@@ -23,6 +23,7 @@ import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.request.JdaReques
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Error
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.JdaResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.MetaData
+import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.PromptResponse
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.RequestType
 import uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Stage
 import uk.gov.justice.digital.hmpps.justicedataagentworker.exception.JdaValidationException
@@ -54,6 +55,7 @@ class JdaWorkerServiceImpl(
   private val telemetryService: TelemetryService,
   @param:Value("\${hmpps.sqs.message.visibility.timeout}") private val visibilityTimeOut: Int,
   @param:Value("\${hmpps.sqs.queues.jdarequestqueues.queuename}") private val requestQueueName: String,
+  @param:Value("\${hmpps.sqs.queues.jdaresponsequeues.queuename}") private val responseQueueName: String,
 ) : JdaWorkerService {
 
   @Autowired
@@ -73,20 +75,16 @@ class JdaWorkerServiceImpl(
     response = convertLlmResponseToApiResponse(response, null)
     if (!jsonSchema.isNullOrBlank()) {
       logger.info("Validating data with json schema")
-      jsonSchemaValidator.validateJson(jsonSchema, response as String)
+      jsonSchemaValidator.validateJson(jsonSchema, response.response)
     }
     return response
   }
 
   override suspend fun processSynchronousJdaRequest(jdaRequest: JdaRequest): JdaResponse {
-    val promptVersionResponse = if (jdaRequest.prompt.version != null) {
-      promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version.toInt())
-    } else {
-      promptService.getPromptByKey(jdaRequest.prompt.key)
-    }
+    val promptVersionResponse = getPromptFromJdaRequest(jdaRequest)
     val version = promptVersionResponse.promptVersion.version
     val time = LocalDateTime.now(ZoneOffset.UTC)
-    var llmResponse: Any? = null
+    var llmResponse: Any?
     val totalInputItems = jdaBatchProcesser.getJsonArraySize(jdaRequest.requestData)
     val requestHistory = RequestHistory(
       id = Generators.timeBasedEpochGenerator().generate(),
@@ -107,12 +105,13 @@ class JdaWorkerServiceImpl(
     )
     var inputJson = jdaRequest.requestData
     inputJson = Json.pretty(inputJson)
-    validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.requestContract), inputJson, requestHistory)
+    validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.requestContract), inputJson, requestHistory, promptVersionResponse, true)
     var error: Error? = null
     var response: LlmResponseData? = null
     var status: uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status? = null
     var historyStatus: Status? = null
     var dataResponse: Any? = null
+    var completionTime: Long? = null
     coroutineScope {
       launch {
         requestHistoryService.saveRequestHistory(requestHistory)
@@ -130,24 +129,13 @@ class JdaWorkerServiceImpl(
           )
           response = convertLlmResponseToApiResponse(llmResponse!!, requestHistory)
           if (promptVersionResponse.promptVersion.responseContract != null) {
-            validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response.response, requestHistory)
+            validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response.response, requestHistory, promptVersionResponse, false)
           }
         } catch (e: LiteLlmException) {
           error = Error(
             code = "LLM_REFUSED_REQUEST",
             message = e.message!!,
             stage = Stage.GATEWAY,
-          )
-          telemetryService.sendTelemetryData(
-            eventName = AzureCustomEvents.LLM_REFUSED_REQUEST.toString(),
-            queueName = null,
-            requestId = requestHistory.id,
-            correlationId = requestHistory.correlationId,
-            promptKey = promptVersionResponse.promptKey,
-            promptVersion = promptVersionResponse.promptVersion.version,
-            dateTime = LocalDateTime.now(ZoneOffset.UTC),
-            inputItemNum = null,
-            outputItemNum = null,
           )
           logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
         } catch (e: JdaValidationException) {
@@ -156,17 +144,6 @@ class JdaWorkerServiceImpl(
             message = e.message!!,
             stage = Stage.VALIDATION,
           )
-          telemetryService.sendTelemetryData(
-            eventName = AzureCustomEvents.RESPONSE_CONTRACT_VALIDATION_FAILED.toString(),
-            queueName = null,
-            requestId = requestHistory.id,
-            correlationId = requestHistory.correlationId,
-            promptKey = promptVersionResponse.promptKey,
-            promptVersion = promptVersionResponse.promptVersion.version,
-            dateTime = LocalDateTime.now(ZoneOffset.UTC),
-            inputItemNum = null,
-            outputItemNum = null,
-          )
           logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
         } catch (e: Exception) {
           error = Error(
@@ -174,22 +151,29 @@ class JdaWorkerServiceImpl(
             message = e.message!!,
             stage = Stage.INTERNAL,
           )
-          telemetryService.sendTelemetryData(
-            eventName = AzureCustomEvents.LLM_REFUSED_REQUEST.toString(),
-            queueName = null,
-            requestId = requestHistory.id,
-            correlationId = requestHistory.correlationId,
-            promptKey = promptVersionResponse.promptKey,
-            promptVersion = promptVersionResponse.promptVersion.version,
-            dateTime = LocalDateTime.now(ZoneOffset.UTC),
-            inputItemNum = null,
-            outputItemNum = null,
-          )
           logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
         }
       }
     }
     if (error != null) {
+      if (error.code == "LLM_REFUSED_REQUEST") {
+        telemetryService.sendTelemetryData(
+          eventName = AzureCustomEvents.LLM_REFUSED_REQUEST.toString(),
+          queueName = null,
+          requestId = requestHistory.id,
+          correlationId = requestHistory.correlationId,
+          promptKey = promptVersionResponse.promptKey,
+          promptVersion = promptVersionResponse.promptVersion.version,
+          dateTime = LocalDateTime.now(ZoneOffset.UTC),
+          batchSize = null,
+          inputToken = null,
+          outputToken = null,
+          totalTokens = null,
+          completionTime = null,
+          inputItemNum = null,
+          outputItemNum = null,
+        )
+      }
       status = uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.FAILED
       historyStatus = Status.FAILED
       dataResponse = error
@@ -207,6 +191,7 @@ class JdaWorkerServiceImpl(
     requestHistory.totalTokens = response!!.totalTokens
     requestHistory.totalOutputItems = totalOutputItems
     requestHistoryService.saveRequestHistory(requestHistory)
+    completionTime = Duration.between(requestHistory.receivedAt, requestHistory.completedAt).toMillis()
     var missingIdentifiers: Set<String>? = null
     if (jdaRequest.validityIdentifier != null) {
       missingIdentifiers = mutableSetOf<String>()
@@ -218,6 +203,22 @@ class JdaWorkerServiceImpl(
         }
       }
     }
+    telemetryService.sendTelemetryData(
+      eventName = AzureCustomEvents.SYNCHRONOUS_REQUEST_PROCESSED.toString(),
+      queueName = null,
+      requestId = requestHistory.id,
+      correlationId = requestHistory.correlationId,
+      promptKey = promptVersionResponse.promptKey,
+      promptVersion = promptVersionResponse.promptVersion.version,
+      dateTime = LocalDateTime.now(ZoneOffset.UTC),
+      batchSize = promptVersionResponse.promptVersion.batchSize,
+      inputToken = requestHistory.completionTokens,
+      outputToken = requestHistory.completionTokens,
+      totalTokens = requestHistory.totalTokens,
+      completionTime = completionTime.toInt(),
+      inputItemNum = requestHistory.totalInputItems,
+      outputItemNum = requestHistory.totalOutputItems,
+    )
     return JdaResponse(
       requestHistory.id,
       jdaRequest.correlationId,
@@ -234,7 +235,7 @@ class JdaWorkerServiceImpl(
         requestHistory.receivedAt,
         requestHistory.receivedAt,
         requestHistory.completedAt,
-        Duration.between(requestHistory.receivedAt, requestHistory.completedAt).toMillis(),
+        completionTime,
       ),
     )
   }
@@ -244,11 +245,7 @@ class JdaWorkerServiceImpl(
     var completionTokens = 0
     var totalTokens = 0
     logger.info("Async request received for correlation id: ${jdaRequest.correlationId} to sent to Llm")
-    val promptVersionResponse = if (jdaRequest.prompt.version != null) {
-      promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version.toInt())
-    } else {
-      promptService.getPromptByKey(jdaRequest.prompt.key)
-    }
+    val promptVersionResponse = getPromptFromJdaRequest(jdaRequest)
     val version = promptVersionResponse.promptVersion.version
     val time = LocalDateTime.now(ZoneOffset.UTC)
     var llmResponse: Any?
@@ -282,18 +279,19 @@ class JdaWorkerServiceImpl(
       promptKey = promptVersionResponse.promptKey,
       promptVersion = promptVersionResponse.promptVersion.version,
       dateTime = LocalDateTime.now(ZoneOffset.UTC),
+      batchSize = promptVersionResponse.promptVersion.batchSize,
+      inputToken = null,
+      outputToken = null,
+      totalTokens = null,
+      completionTime = null,
       inputItemNum = null,
       outputItemNum = null,
     )
-    var inputJson = jdaRequest.requestData
-    inputJson = Json.pretty(inputJson)
     val jdaRequests = jdaBatchProcesser.processJdaRequest(jdaRequest, promptVersionResponse.promptVersion.batchSize)
-    var llmResponses = JsonNodeFactory.instance.arrayNode()
+    val llmResponses = JsonNodeFactory.instance.arrayNode()
     var error: Error? = null
-    var response: String? = null
-    var status: uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status? = null
-    var historyStatus: Status? = null
-    var dataResponse: Any? = null
+    var historyStatus: Status?
+    var dataResponse: Any?
     var missingIdentifiers: Set<String>? = null
     coroutineScope {
       launch {
@@ -322,7 +320,7 @@ class JdaWorkerServiceImpl(
               totalTokens += response.totalTokens
             }
             if (promptVersionResponse.promptVersion.responseContract != null) {
-              validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response.response, requestHistory)
+              validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.responseContract), response.response, requestHistory, promptVersionResponse, false)
             }
             val jsonNode = objectMapper.readTree(response.response)
             if (jsonNode.isArray) {
@@ -347,34 +345,12 @@ class JdaWorkerServiceImpl(
             message = e.message!!,
             stage = Stage.GATEWAY,
           )
-          telemetryService.sendTelemetryData(
-            eventName = AzureCustomEvents.LLM_REFUSED_REQUEST.toString(),
-            queueName = null,
-            requestId = requestHistory.id,
-            correlationId = requestHistory.correlationId,
-            promptKey = promptVersionResponse.promptKey,
-            promptVersion = promptVersionResponse.promptVersion.version,
-            dateTime = LocalDateTime.now(ZoneOffset.UTC),
-            inputItemNum = null,
-            outputItemNum = null,
-          )
           logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
         } catch (e: JdaValidationException) {
           error = Error(
             code = "RESPONSE_CONTRACT_VALIDATION_FAILED",
             message = e.message!!,
             stage = Stage.VALIDATION,
-          )
-          telemetryService.sendTelemetryData(
-            eventName = AzureCustomEvents.RESPONSE_CONTRACT_VALIDATION_FAILED.toString(),
-            queueName = null,
-            requestId = requestHistory.id,
-            correlationId = requestHistory.correlationId,
-            promptKey = promptVersionResponse.promptKey,
-            promptVersion = promptVersionResponse.promptVersion.version,
-            dateTime = LocalDateTime.now(ZoneOffset.UTC),
-            inputItemNum = null,
-            outputItemNum = null,
           )
           logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
         } catch (e: Exception) {
@@ -383,27 +359,32 @@ class JdaWorkerServiceImpl(
             message = e.message!!,
             stage = Stage.INTERNAL,
           )
-          telemetryService.sendTelemetryData(
-            eventName = AzureCustomEvents.LLM_REFUSED_REQUEST.toString(),
-            queueName = null,
-            requestId = requestHistory.id,
-            correlationId = requestHistory.correlationId,
-            promptKey = promptVersionResponse.promptKey,
-            promptVersion = promptVersionResponse.promptVersion.version,
-            dateTime = LocalDateTime.now(ZoneOffset.UTC),
-            inputItemNum = null,
-            outputItemNum = null,
-          )
           logger.error("Exception occurred when getting llm response with correlation id: ${jdaRequest.correlationId},  exception: ${e.message}")
         }
       }
     }
     if (error != null) {
-      status = uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.FAILED
+      if (error.code == "LLM_REFUSED_REQUEST") {
+        telemetryService.sendTelemetryData(
+          eventName = AzureCustomEvents.LLM_REFUSED_REQUEST.toString(),
+          queueName = null,
+          requestId = requestHistory.id,
+          correlationId = requestHistory.correlationId,
+          promptKey = promptVersionResponse.promptKey,
+          promptVersion = promptVersionResponse.promptVersion.version,
+          dateTime = LocalDateTime.now(ZoneOffset.UTC),
+          batchSize = null,
+          inputToken = null,
+          outputToken = null,
+          totalTokens = null,
+          completionTime = null,
+          inputItemNum = null,
+          outputItemNum = null,
+        )
+      }
       historyStatus = Status.FAILED
       dataResponse = error
     } else {
-      status = uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.SUCCEEDED
       historyStatus = Status.SUCCEEDED
       dataResponse = llmResponses
     }
@@ -415,6 +396,7 @@ class JdaWorkerServiceImpl(
     requestHistory.totalTokens = totalTokens
     requestHistory.totalOutputItems = totalOutputItems
     requestHistoryService.saveRequestHistory(requestHistory)
+    val completionTime = Duration.between(requestHistory.receivedAt, requestHistory.completedAt).toMillis()
     val jdaResponse = JdaResponse(
       requestHistory.id,
       jdaRequest.correlationId,
@@ -431,40 +413,71 @@ class JdaWorkerServiceImpl(
         requestHistory.receivedAt,
         requestHistory.receivedAt,
         requestHistory.completedAt,
-        Duration.between(requestHistory.receivedAt, requestHistory.completedAt).toMillis(),
+        completionTime,
       ),
     )
     jdaMessagePublisher.publishJdaResponse(jdaResponse)
+    telemetryService.sendTelemetryData(
+      eventName = AzureCustomEvents.MESSAGE_SENT_TO_QUEUE.toString(),
+      queueName = responseQueueName,
+      requestId = requestHistory.id,
+      correlationId = requestHistory.correlationId,
+      promptKey = promptVersionResponse.promptKey,
+      promptVersion = promptVersionResponse.promptVersion.version,
+      dateTime = LocalDateTime.now(ZoneOffset.UTC),
+      batchSize = promptVersionResponse.promptVersion.batchSize,
+      inputToken = requestHistory.completionTokens,
+      outputToken = requestHistory.completionTokens,
+      totalTokens = requestHistory.totalTokens,
+      completionTime = completionTime.toInt(),
+      inputItemNum = requestHistory.totalInputItems,
+      outputItemNum = requestHistory.totalOutputItems,
+    )
   }
 
   override suspend fun submitAsynchronousJdaRequestToQueue(jdaRequest: JdaRequest) {
     logger.info("Async jda request received to submit to request queue for correlation id: ${jdaRequest.correlationId} to sent to Llm")
-    val promptVersionResponse = if (jdaRequest.prompt.version != null) {
-      promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version.toInt())
-    } else {
-      promptService.getPromptByKey(jdaRequest.prompt.key)
-    }
-    val version = promptVersionResponse.promptVersion.version
-    var inputJson = jdaRequest.requestData
-    inputJson = Json.pretty(inputJson)
-    validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.requestContract), inputJson, null)
-    val time = LocalDateTime.now(ZoneOffset.UTC)
+    val promptVersionResponse = getPromptFromJdaRequest(jdaRequest)
     val requestHistory = RequestHistory(
       Generators.timeBasedEpochGenerator().generate(),
       false,
       jdaRequest.correlationId,
       promptVersionResponse.promptVersion.id,
       null,
-      time,
+      LocalDateTime.now(ZoneOffset.UTC),
       null,
-      Status.QUEUED,
+      Status.PROCESSING,
       null,
       null,
     )
     requestHistoryService.saveRequestHistory(requestHistory)
+    var inputJson = jdaRequest.requestData
+    inputJson = Json.pretty(inputJson)
+    validateJsonDataWithJsonSchema(objectMapper.writeValueAsString(promptVersionResponse.promptVersion.requestContract), inputJson, requestHistory, promptVersionResponse, true)
+    val time = LocalDateTime.now(ZoneOffset.UTC)
+    requestHistory.new = false
+    requestHistory.status = Status.QUEUED
+    requestHistory.queuedAt = time
+    requestHistoryService.saveRequestHistory(requestHistory)
     jdaRequest.requestId = requestHistory.id
     logger.info("Send async jda request to the jda request queue")
     jdaMessagePublisher.publishJdaRequest(jdaRequest)
+    telemetryService.sendTelemetryData(
+      eventName = AzureCustomEvents.MESSAGE_SENT_TO_QUEUE.toString(),
+      queueName = requestQueueName,
+      requestId = requestHistory.id,
+      correlationId = requestHistory.correlationId,
+      promptKey = promptVersionResponse.promptKey,
+      promptVersion = promptVersionResponse.promptVersion.version,
+      dateTime = LocalDateTime.now(ZoneOffset.UTC),
+      batchSize = null,
+      inputToken = null,
+      outputToken = null,
+      totalTokens = null,
+      completionTime = null,
+      inputItemNum = null,
+      outputItemNum = null,
+    )
   }
 
   override suspend fun dequeueResponse(): JdaResponse {
@@ -525,7 +538,7 @@ class JdaWorkerServiceImpl(
     return Prompt(list)
   }
 
-  private suspend fun validateJsonDataWithJsonSchema(jsonSchema: String, data: String, requestHistory: RequestHistory?) {
+  private suspend fun validateJsonDataWithJsonSchema(jsonSchema: String, data: String, requestHistory: RequestHistory?, prompt: PromptResponse, inputDataValidation: Boolean) {
     try {
       jsonSchemaValidator.validateJson(jsonSchema, data)
     } catch (e: Exception) {
@@ -536,6 +549,27 @@ class JdaWorkerServiceImpl(
         requestHistory.errorAt = LocalDateTime.now(ZoneOffset.UTC)
         requestHistory.errorMessage = e.message
         requestHistoryService.saveRequestHistory(requestHistory)
+        val event = if (inputDataValidation) {
+          AzureCustomEvents.REQUEST_CONTRACT_VALIDATION_FAILED
+        } else {
+          AzureCustomEvents.RESPONSE_CONTRACT_VALIDATION_FAILED
+        }
+        telemetryService.sendTelemetryData(
+          eventName = event.toString(),
+          queueName = null,
+          requestId = requestHistory.id,
+          correlationId = requestHistory.correlationId,
+          promptKey = prompt.promptKey,
+          promptVersion = prompt.promptVersion.version,
+          dateTime = LocalDateTime.now(ZoneOffset.UTC),
+          batchSize = null,
+          inputToken = null,
+          outputToken = null,
+          totalTokens = null,
+          completionTime = null,
+          inputItemNum = null,
+          outputItemNum = null,
+        )
       }
       throw JdaValidationException("Error occurred validating with json schema: ${e.message}")
     }
@@ -581,6 +615,14 @@ class JdaWorkerServiceImpl(
     }
   }
 
+  private suspend fun getPromptFromJdaRequest(jdaRequest: JdaRequest): PromptResponse {
+    val promptVersionResponse = if (jdaRequest.prompt.version != null) {
+      promptService.getPromptsByKeyAndVersion(jdaRequest.prompt.key, jdaRequest.prompt.version.toInt())
+    } else {
+      promptService.getPromptByKey(jdaRequest.prompt.key)
+    }
+    return promptVersionResponse
+  }
   override suspend fun deleteMessageFromResponseQueue(receipt: JdaDequeReceipt) {
     try {
       logger.info("Deleting message from response queue: ")
