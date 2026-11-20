@@ -23,6 +23,11 @@ class TelemetryService(private val telemetryClient: TelemetryClient) {
     promptKey: String,
     promptVersion: Int?,
     dateTime: LocalDateTime,
+    batchSize: Int?,
+    inputToken: Int?,
+    outputToken: Int?,
+    totalTokens: Int?,
+    completionTime: Int?,
     inputItemNum: Int?,
     outputItemNum: Int?,
   ) {
@@ -33,6 +38,21 @@ class TelemetryService(private val telemetryClient: TelemetryClient) {
     map["dateTime"] = dateTime.format(FORMATTER)
     if (queueName != null) {
       map["queueName"] = queueName
+    }
+    if (batchSize != null) {
+      map["batchSize"] = batchSize.toString()
+    }
+    if (inputToken != null) {
+      map["inputToken"] = inputToken.toString()
+    }
+    if (outputToken != null) {
+      map["outputToken"] = outputToken.toString()
+    }
+    if (totalTokens != null) {
+      map["totalTokens"] = totalTokens.toString()
+    }
+    if (completionTime != null) {
+      map["completionTime"] = completionTime.toString()
     }
     if (promptVersion != null) {
       map["promptVersion"] = promptVersion.toString()
