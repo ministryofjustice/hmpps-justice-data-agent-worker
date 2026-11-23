@@ -166,12 +166,13 @@ class JdaWorkerServiceImpl(
           promptVersion = promptVersionResponse.promptVersion.version,
           dateTime = LocalDateTime.now(ZoneOffset.UTC),
           batchSize = null,
-          inputToken = null,
-          outputToken = null,
+          inputTokens = null,
+          outputTokens = null,
           totalTokens = null,
-          completionTime = null,
-          inputItemNum = null,
-          outputItemNum = null,
+          completionDuration = null,
+          inputItemsNum = null,
+          outputItemsNum = null,
+          missingIdentifiersNum = null,
         )
       }
       status = uk.gov.justice.digital.hmpps.justicedataagentworker.dto.response.Status.FAILED
@@ -193,6 +194,7 @@ class JdaWorkerServiceImpl(
     requestHistoryService.saveRequestHistory(requestHistory)
     completionTime = Duration.between(requestHistory.receivedAt, requestHistory.completedAt).toMillis()
     var missingIdentifiers: Set<String>? = null
+    var missingIdentifiersNum: Int? = null
     if (jdaRequest.validityIdentifier != null) {
       missingIdentifiers = mutableSetOf<String>()
       val inputIdentifiers = jsonPointerProcessor.getIdentifierFromJsonPath(jdaRequest.requestData, jdaRequest.validityIdentifier.keyInInputData)
@@ -203,6 +205,9 @@ class JdaWorkerServiceImpl(
         }
       }
     }
+    if (missingIdentifiers != null) {
+      missingIdentifiersNum = missingIdentifiers.size
+    }
     telemetryService.sendTelemetryData(
       eventName = AzureCustomEvents.SYNCHRONOUS_REQUEST_PROCESSED.toString(),
       queueName = null,
@@ -212,12 +217,13 @@ class JdaWorkerServiceImpl(
       promptVersion = promptVersionResponse.promptVersion.version,
       dateTime = LocalDateTime.now(ZoneOffset.UTC),
       batchSize = promptVersionResponse.promptVersion.batchSize,
-      inputToken = requestHistory.completionTokens,
-      outputToken = requestHistory.completionTokens,
+      inputTokens = requestHistory.promptTokens,
+      outputTokens = requestHistory.completionTokens,
       totalTokens = requestHistory.totalTokens,
-      completionTime = completionTime.toInt(),
-      inputItemNum = requestHistory.totalInputItems,
-      outputItemNum = requestHistory.totalOutputItems,
+      completionDuration = completionTime.toInt(),
+      inputItemsNum = requestHistory.totalInputItems,
+      outputItemsNum = requestHistory.totalOutputItems,
+      missingIdentifiersNum = missingIdentifiersNum,
     )
     return JdaResponse(
       requestHistory.id,
@@ -280,12 +286,13 @@ class JdaWorkerServiceImpl(
       promptVersion = promptVersionResponse.promptVersion.version,
       dateTime = LocalDateTime.now(ZoneOffset.UTC),
       batchSize = promptVersionResponse.promptVersion.batchSize,
-      inputToken = null,
-      outputToken = null,
+      inputTokens = null,
+      outputTokens = null,
       totalTokens = null,
-      completionTime = null,
-      inputItemNum = null,
-      outputItemNum = null,
+      completionDuration = null,
+      inputItemsNum = null,
+      outputItemsNum = null,
+      missingIdentifiersNum = null,
     )
     val jdaRequests = jdaBatchProcesser.processJdaRequest(jdaRequest, promptVersionResponse.promptVersion.batchSize)
     val llmResponses = JsonNodeFactory.instance.arrayNode()
@@ -293,6 +300,7 @@ class JdaWorkerServiceImpl(
     var historyStatus: Status?
     var dataResponse: Any?
     var missingIdentifiers: Set<String>? = null
+    var missingIdentifiersNum: Int? = null
     coroutineScope {
       launch {
         requestHistoryService.saveRequestHistory(requestHistory)
@@ -374,12 +382,13 @@ class JdaWorkerServiceImpl(
           promptVersion = promptVersionResponse.promptVersion.version,
           dateTime = LocalDateTime.now(ZoneOffset.UTC),
           batchSize = null,
-          inputToken = null,
-          outputToken = null,
+          inputTokens = null,
+          outputTokens = null,
           totalTokens = null,
-          completionTime = null,
-          inputItemNum = null,
-          outputItemNum = null,
+          completionDuration = null,
+          inputItemsNum = null,
+          outputItemsNum = null,
+          missingIdentifiersNum = null,
         )
       }
       historyStatus = Status.FAILED
@@ -417,6 +426,9 @@ class JdaWorkerServiceImpl(
       ),
     )
     jdaMessagePublisher.publishJdaResponse(jdaResponse)
+    if (missingIdentifiers != null) {
+      missingIdentifiersNum = missingIdentifiers.size
+    }
     telemetryService.sendTelemetryData(
       eventName = AzureCustomEvents.MESSAGE_SENT_TO_QUEUE.toString(),
       queueName = responseQueueName,
@@ -426,12 +438,13 @@ class JdaWorkerServiceImpl(
       promptVersion = promptVersionResponse.promptVersion.version,
       dateTime = LocalDateTime.now(ZoneOffset.UTC),
       batchSize = promptVersionResponse.promptVersion.batchSize,
-      inputToken = requestHistory.completionTokens,
-      outputToken = requestHistory.completionTokens,
+      inputTokens = requestHistory.promptTokens,
+      outputTokens = requestHistory.completionTokens,
       totalTokens = requestHistory.totalTokens,
-      completionTime = completionTime.toInt(),
-      inputItemNum = requestHistory.totalInputItems,
-      outputItemNum = requestHistory.totalOutputItems,
+      completionDuration = completionTime.toInt(),
+      inputItemsNum = requestHistory.totalInputItems,
+      outputItemsNum = requestHistory.totalOutputItems,
+      missingIdentifiersNum = missingIdentifiersNum,
     )
   }
 
@@ -471,12 +484,13 @@ class JdaWorkerServiceImpl(
       promptVersion = promptVersionResponse.promptVersion.version,
       dateTime = LocalDateTime.now(ZoneOffset.UTC),
       batchSize = null,
-      inputToken = null,
-      outputToken = null,
+      inputTokens = null,
+      outputTokens = null,
       totalTokens = null,
-      completionTime = null,
-      inputItemNum = null,
-      outputItemNum = null,
+      completionDuration = null,
+      inputItemsNum = null,
+      outputItemsNum = null,
+      missingIdentifiersNum = null,
     )
   }
 
@@ -508,6 +522,26 @@ class JdaWorkerServiceImpl(
         throw NotFoundException("Queue is empty, no message in queue to dequeue.") // http response code for this will be 404
       }
       val message = "Unexpected Exception during dequeue response queue: ${e.message}" // http response code for this will be 500
+      throw SqsQueueException(message)
+    }
+  }
+
+  override suspend fun deleteMessageFromResponseQueue(receipt: JdaDequeReceipt) {
+    try {
+      logger.info("Deleting message from response queue: ")
+      val responseQueue = hmppsQueueService
+        .findByQueueId("jdaresponsequeues")
+      val sqsClient = responseQueue?.sqsClient
+      val queueUrl = responseQueue?.queueUrl
+      sqsClient?.deleteMessage(
+        DeleteMessageRequest.builder()
+          .queueUrl(queueUrl)
+          .receiptHandle(receipt.receiptId)
+          .build(),
+      )
+    } catch (e: Exception) {
+      val message = "Error deleting message with receipt id: ${receipt.receiptId}, exception: ${e.message}"
+      logger.error(message)
       throw SqsQueueException(message)
     }
   }
@@ -563,12 +597,13 @@ class JdaWorkerServiceImpl(
           promptVersion = prompt.promptVersion.version,
           dateTime = LocalDateTime.now(ZoneOffset.UTC),
           batchSize = null,
-          inputToken = null,
-          outputToken = null,
+          inputTokens = null,
+          outputTokens = null,
           totalTokens = null,
-          completionTime = null,
-          inputItemNum = null,
-          outputItemNum = null,
+          completionDuration = null,
+          inputItemsNum = null,
+          outputItemsNum = null,
+          missingIdentifiersNum = null,
         )
       }
       throw JdaValidationException("Error occurred validating with json schema: ${e.message}")
@@ -622,25 +657,6 @@ class JdaWorkerServiceImpl(
       promptService.getPromptByKey(jdaRequest.prompt.key)
     }
     return promptVersionResponse
-  }
-  override suspend fun deleteMessageFromResponseQueue(receipt: JdaDequeReceipt) {
-    try {
-      logger.info("Deleting message from response queue: ")
-      val responseQueue = hmppsQueueService
-        .findByQueueId("jdaresponsequeues")
-      val sqsClient = responseQueue?.sqsClient
-      val queueUrl = responseQueue?.queueUrl
-      sqsClient?.deleteMessage(
-        DeleteMessageRequest.builder()
-          .queueUrl(queueUrl)
-          .receiptHandle(receipt.receiptId)
-          .build(),
-      )
-    } catch (e: Exception) {
-      val message = "Error deleting message with receipt id: ${receipt.receiptId}, exception: ${e.message}"
-      logger.error(message)
-      throw SqsQueueException(message)
-    }
   }
 }
 
