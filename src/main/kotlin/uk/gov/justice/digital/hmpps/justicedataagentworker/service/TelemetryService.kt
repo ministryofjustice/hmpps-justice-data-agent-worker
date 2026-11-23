@@ -24,12 +24,13 @@ class TelemetryService(private val telemetryClient: TelemetryClient) {
     promptVersion: Int?,
     dateTime: LocalDateTime,
     batchSize: Int?,
-    inputToken: Int?,
-    outputToken: Int?,
+    inputTokens: Int?,
+    outputTokens: Int?,
     totalTokens: Int?,
-    completionTime: Int?,
-    inputItemNum: Int?,
-    outputItemNum: Int?,
+    completionDuration: Int?,
+    inputItemsNum: Int?,
+    outputItemsNum: Int?,
+    missingIdentifiersNum: Int?,
   ) {
     val map = mutableMapOf<String, String?>()
     map["requestId"] = requestId.toString()
@@ -42,28 +43,30 @@ class TelemetryService(private val telemetryClient: TelemetryClient) {
     if (batchSize != null) {
       map["batchSize"] = batchSize.toString()
     }
-    if (inputToken != null) {
-      map["inputToken"] = inputToken.toString()
+    if (inputTokens != null) {
+      map["inputTokens"] = inputTokens.toString()
     }
-    if (outputToken != null) {
-      map["outputToken"] = outputToken.toString()
+    if (outputTokens != null) {
+      map["outputTokens"] = outputTokens.toString()
     }
     if (totalTokens != null) {
       map["totalTokens"] = totalTokens.toString()
     }
-    if (completionTime != null) {
-      map["completionTime"] = completionTime.toString()
+    if (completionDuration != null) {
+      map["completionDuration"] = completionDuration.toString()
     }
     if (promptVersion != null) {
       map["promptVersion"] = promptVersion.toString()
     }
-    if (inputItemNum != null) {
-      map["inputItemNum"] = inputItemNum.toString()
+    if (inputItemsNum != null) {
+      map["inputItemsNum"] = inputItemsNum.toString()
     }
-    if (outputItemNum != null) {
-      map["outputItemNum"] = outputItemNum.toString()
+    if (outputItemsNum != null) {
+      map["outputItemsNum"] = outputItemsNum.toString()
     }
-
+    if (missingIdentifiersNum != null) {
+      map["missingIdentifiersNum"] = missingIdentifiersNum.toString()
+    }
     try {
       telemetryClient.trackEvent(eventName, map, null)
     } catch (e: Exception) {
