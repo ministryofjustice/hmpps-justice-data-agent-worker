@@ -19,7 +19,7 @@ dependencies {
   implementation("org.flywaydb:flyway-database-postgresql")
   implementation("org.springframework.boot:spring-boot-starter-flyway:4.1.1")
   implementation("org.postgresql:r2dbc-postgresql:1.1.2.RELEASE")
-  implementation("org.postgresql:postgresql:42.7.14")
+  implementation("org.postgresql:postgresql:42.7.15")
   constraints {
     implementation("com.ongres.scram:scram-client:3.4")
     implementation("com.ongres.scram:scram-common:3.4")
