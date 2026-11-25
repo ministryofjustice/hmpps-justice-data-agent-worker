@@ -4,7 +4,7 @@ plugins {
   kotlin("plugin.jpa") version "2.4.21"
 }
 
-extra["springAiVersion"] = "2.0.1"
+extra["springAiVersion"] = "2.0.3"
 
 dependencies {
   implementation("uk.gov.justice.service.hmpps:hmpps-kotlin-spring-boot-starter:3.1.0")
